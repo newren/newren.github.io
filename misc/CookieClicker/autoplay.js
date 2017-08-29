@@ -71,6 +71,49 @@ CM.Disp.PlaySound = function(url) {
   CM.Strategy.oldPlaySound(url);
 }
 
+CM.Strategy.cachePurchaseInfo = function() {
+  // First, determine the current multiplicative factor from active buffs
+  mult = 1;
+  Object.keys(Game.buffs).forEach(name => {mult *= Game.buffs[name].multCpS});
+  CM.Strategy.currentBuff = mult;
+
+  // get a short name for a value we use repeatedly below
+  trueCpS = CM.Strategy.trueCpS;
+
+  // Second, compute a projected payoff for special items; CookieMonster just
+  // gives Infinity for all of these.
+  CM.Strategy.specialPPs = {
+    "Lucky day":   Game.Upgrades["Lucky day"].getPrice()  / .7/trueCpS,
+    "Serendipity": Game.Upgrades["Serendipity"].getPrice()/1.4/trueCpS,
+    "Get Lucky":   Game.Upgrades["Get lucky"].getPrice()  /7.0/trueCpS,
+  }
+  mice = ["Plastic mouse",
+          "Iron mouse",
+          "Titanium mouse",
+          "Adamantium mouse",
+          "Unobtainium mouse",
+          "Eludium mouse",
+          "Wishalloy mouse",
+          "Fantasteel mouse",
+          "Nevercrack mouse",
+          "Armythril mouse"]
+  mice.forEach(mouse =>
+               {CM.Strategy.specialPPs[mouse] =
+                   Game.Upgrades[mouse].getPrice() / 0.01/trueCpS})
+}
+
+CM.Strategy.getTruePP = function(item) {
+  pp = NaN; // pp == Projected Payoff, mostly calculated by CookieMonster
+  if (CM.Cache.Upgrades[item])
+    pp = CM.Cache.Upgrades[item].pp * CM.Strategy.currentBuff;
+  else if (CM.Cache.Objects[item])
+    pp = CM.Cache.Objects[item].pp * CM.Strategy.currentBuff;
+
+  if (CM.Strategy.specialPPs[item])
+    pp = CM.Strategy.specialPPs[item]
+  return pp;
+}
+
 CM.Strategy.determineBestBuy = function() {
   // First purchase is always a Cursor.  Also, when we haven't yet bought
   // anything, pp for all upgrades is NaN or Infinity, so we really do
@@ -79,28 +122,33 @@ CM.Strategy.determineBestBuy = function() {
     return {name: "Cursor", price: Game.Objects.Cursor.getPrice(),
             pp: CM.Cache.Objects.Cursor.pp, obj: Game.Objects.Cursor}
   }
-  // FIXME: Handle GetLucky and cursors and such
-  ignore = ["Golden switch [off]", "One mind", "Heavenly chip secret"]
+
+  // Determine the current buff so we can get corrected pp values
+  CM.Strategy.cachePurchaseInfo();
+
+  // Find the item with the lowest projected payoff
+  lowestPP = Number.MAX_SAFE_INTEGER;
+  best = {};
+  ignore = ["Golden switch [off]", "One mind"]
   for (item in CM.Cache.Upgrades) {
-    if (CM.Cache.Upgrades[item].color == "Blue") {
-      if (Game.Upgrades[item].unlocked) {
-        if (ignore.indexOf(item) === -1) {
+    if (Game.Upgrades[item].unlocked) {
+      if (ignore.indexOf(item) === -1) {
+        pp = CM.Strategy.getTruePP(item);
+        if (pp < lowestPP) {
+          lowestPP = pp;
           price = Game.Upgrades[item].getPrice()
-          return {name: item, price: price, pp: CM.Cache.Upgrades[item].pp,
-                  obj: Game.Upgrades[item]}
-        } //else { console.log(`Skipping ${item}; in ignore list`) }
-      } //else { console.log(`Skipping ${item}; not unlocked`) }
-    } //else { console.log(`Skipping ${item}; not blue`) }
+          best = {name: item, price: price, pp: pp, obj: Game.Upgrades[item]}
+        } //else { console.log(`Skipping ${item}; not better PP`) }
+      } //else { console.log(`Skipping ${item}; in ignore list`) }
+    } //else { console.log(`Skipping ${item}; not unlocked`) }
   }
-  lowest = Number.MAX_SAFE_INTEGER;
-  best = {}
   for (item in CM.Cache.Objects) {
-    if (CM.Cache.Objects[item].pp < lowest) {
-      lowest = CM.Cache.Objects[item].pp
+    pp = CM.Strategy.getTruePP(item);
+    if (pp < lowestPP) {
+      lowestPP = pp;
       price = Game.Objects[item].getPrice()
-      best = {name: item, price: price, pp: CM.Cache.Objects[item].pp,
-              obj: Game.Objects[item]}
-    } //else { console.log(`Skipping ${item}; not green`) }
+      best = {name: item, price: price, pp: pp, obj: Game.Objects[item]}
+    } //else { console.log(`Skipping ${item}; not better PP`) }
   }
   return best
 }
