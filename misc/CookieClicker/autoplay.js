@@ -72,6 +72,13 @@ CM.Disp.PlaySound = function(url) {
 }
 
 CM.Strategy.determineBestBuy = function() {
+  // First purchase is always a Cursor.  Also, when we haven't yet bought
+  // anything, pp for all upgrades is NaN or Infinity, so we really do
+  // need a special case here.
+  if (Game.cookiesPs === 0) {
+    return {name: "Cursor", price: Game.Objects.Cursor.getPrice(),
+            pp: CM.Cache.Objects.Cursor.pp, obj: Game.Objects.Cursor}
+  }
   // FIXME: Handle GetLucky and cursors and such
   ignore = ["Golden switch [off]", "One mind", "Heavenly chip secret"]
   for (item in CM.Cache.Upgrades) {
