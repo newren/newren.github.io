@@ -72,11 +72,6 @@ CM.Disp.PlaySound = function(url) {
 }
 
 CM.Strategy.cachePurchaseInfo = function() {
-  // First, determine the current multiplicative factor from active buffs
-  mult = 1;
-  Object.keys(Game.buffs).forEach(name => {mult *= Game.buffs[name].multCpS});
-  CM.Strategy.currentBuff = mult;
-
   // get a short name for a value we use repeatedly below
   trueCpS = CM.Strategy.trueCpS;
 
@@ -207,6 +202,9 @@ CM.Strategy.handlePurchases = function() {
     return;
 
   // Determine trueCpS, not the temporary CpS we are experiencing now
+  mult = 1;
+  Object.keys(Game.buffs).forEach(name => {mult *= Game.buffs[name].multCpS});
+  CM.Strategy.currentBuff = mult;
   CM.Strategy.trueCpS = Game.cookiesPs / CM.Strategy.currentBuff;
 
   // Re-determine the best thing to purchase
