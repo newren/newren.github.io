@@ -163,8 +163,36 @@ CM.Strategy.determineBestBuy = function() {
   return best
 }
 
+CM.Strategy.expectedTimeUntilLucky = function() {
+  // Get information about how often cookies appear
+  mint = Game.shimmerTypes.golden.minTime/Game.fps;
+  maxt = Game.shimmerTypes.golden.maxTime/Game.fps;
+  used = Game.shimmerTypes.golden.time/Game.fps;
+
+  // Determine how often they appear on average, rough estimate
+  ave = 0.75*mint + 0.25*maxt;
+
+  // Set the factors and determine the last type that appeared
+  factors = {Frenzy: {full: 2.06, prob: 0.620},
+             Lucky:  {full: 2.81, prob: 0.124},
+             Other:  {full: 2.50, prob: 0.400}}
+  map = {'frenzy': 'Frenzy', 'multiply cookies': 'Lucky'}
+  lastType = map[Game.shimmerTypes.golden.last] || "Other"
+
+  // Compute the expected time
+  expected = ave * factors[lastType].full - used * factors[lastType].prob;
+
+  // Even if probabilistically it's better to wait for Lucky buffer, it's
+  // more fun to buy stuff; set a fudge factor.  Besides, the cookies from
+  // a lucky don't compound; cookies from purchases do.
+  fudge_factor = (Math.PI+Math.E)/3;
+
+  return fudge_factor * expected;
+}
+
 CM.Strategy.determineBankBuffer = function() {
-  if (Game.cookiesPs === 0 || CM.Strategy.bestBuy.pp < 300)
+  if (Game.cookiesPs === 0 ||
+      CM.Strategy.bestBuy.pp < CM.Strategy.expectedTimeUntilLucky())
     return 0;
   // FIXME: Extend the bank buffer if spells can be cast
   if (Game.Upgrades["Get lucky"].bought)
@@ -185,9 +213,9 @@ CM.Strategy.handlePurchases = function() {
   if (Date.now() - CM.Strategy.timer.lastBuyCheck > 60000 ||
       !CM.Strategy.bestBuy.item) {
     CM.Strategy.bestBuy = CM.Strategy.determineBestBuy();
-    CM.Strategy.bestBuffer = CM.Strategy.determineBankBuffer();
     CM.Strategy.timer.lastBuyCheck = Date.now();
   }
+  CM.Strategy.bestBuffer = CM.Strategy.determineBankBuffer();
 
   // If we have enough cookies, make the purchase
   if (CM.Cache.lastCookies >=
