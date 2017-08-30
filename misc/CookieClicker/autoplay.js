@@ -102,13 +102,23 @@ CM.Strategy.cachePurchaseInfo = function() {
                    Game.Upgrades[mouse].getPrice() / 0.01/trueCpS})
 }
 
-CM.Strategy.getTruePP = function(item) {
+CM.Strategy.getTruePP = function(item, price) {
   pp = NaN; // pp == Projected Payoff, mostly calculated by CookieMonster
-  if (CM.Cache.Upgrades[item])
+  if (CM.Cache.Upgrades[item]) {
+    // I don't want upgrades to sit around forever unbought, so put some
+    // some minimum pp for all upgrades; besides, it's possible we need one
+    // upgrade to unlock others.
+    if (price < 1*CM.Strategy.trueCpS)
+      return 3.1415926535897932384626433832795; // arbitrary small number
     pp = CM.Cache.Upgrades[item].pp * CM.Strategy.currentBuff;
-  else if (CM.Cache.Objects[item])
+  } else if (CM.Cache.Objects[item]) {
+    // Building also has value due to building special golden cookies, and
+    // because it can unlock upgrades
+    factor = Math.min(5, 0.5*Math.log10(CM.Strategy.trueCpS))
+    if (price < factor * CM.Strategy.trueCpS)
+      return 3.1415926535897932384626433832795; // arbitrary small number
     pp = CM.Cache.Objects[item].pp * CM.Strategy.currentBuff;
-
+  }
   if (CM.Strategy.specialPPs[item])
     pp = CM.Strategy.specialPPs[item]
   return pp;
@@ -133,20 +143,20 @@ CM.Strategy.determineBestBuy = function() {
   for (item in CM.Cache.Upgrades) {
     if (Game.Upgrades[item].unlocked) {
       if (ignore.indexOf(item) === -1) {
-        pp = CM.Strategy.getTruePP(item);
+        price = Game.Upgrades[item].getPrice();
+        pp = CM.Strategy.getTruePP(item, price);
         if (pp < lowestPP) {
           lowestPP = pp;
-          price = Game.Upgrades[item].getPrice()
           best = {name: item, price: price, pp: pp, obj: Game.Upgrades[item]}
         } //else { console.log(`Skipping ${item}; not better PP`) }
       } //else { console.log(`Skipping ${item}; in ignore list`) }
     } //else { console.log(`Skipping ${item}; not unlocked`) }
   }
   for (item in CM.Cache.Objects) {
-    pp = CM.Strategy.getTruePP(item);
+    price = Game.Objects[item].getPrice();
+    pp = CM.Strategy.getTruePP(item, price);
     if (pp < lowestPP) {
       lowestPP = pp;
-      price = Game.Objects[item].getPrice()
       best = {name: item, price: price, pp: pp, obj: Game.Objects[item]}
     } //else { console.log(`Skipping ${item}; not better PP`) }
   }
