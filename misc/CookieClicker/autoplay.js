@@ -196,16 +196,21 @@ CM.Strategy.determineBankBuffer = function() {
     return CM.Cache.Lucky;
 }
 
-CM.Strategy.handlePurchases = function() {
-  // Don't buy upgrades or buildings while in a clickfest
-  if (CM.Strategy.clickInterval)
-    return;
+CM.Strategy.original_remakepp = CM.Cache.RemakePP;
+CM.Cache.RemakePP = function() {
+  CM.Strategy.original_remakepp();
 
-  // Determine trueCpS, not the temporary CpS we are experiencing now
+  // Determine currentBuff and trueCpS, not temporary CpS going on now
   mult = 1;
   Object.keys(Game.buffs).forEach(name => {mult *= Game.buffs[name].multCpS});
   CM.Strategy.currentBuff = mult;
   CM.Strategy.trueCpS = Game.cookiesPs / CM.Strategy.currentBuff;
+}
+
+CM.Strategy.handlePurchases = function() {
+  // Don't buy upgrades or buildings while in a clickfest
+  if (CM.Strategy.clickInterval)
+    return;
 
   // Re-determine the best thing to purchase
   if (Date.now() - CM.Strategy.timer.lastBuyCheck > 60000 ||
