@@ -120,6 +120,9 @@ CM.Strategy.handlePurchases = function() {
   if (CM.Strategy.clickInterval)
     return;
 
+  // Determine trueCpS, not the temporary CpS we are experiencing now
+  CM.Strategy.trueCpS = Game.cookiesPs / CM.Strategy.currentBuff;
+
   // Re-determine the best thing to purchase
   if (Date.now() - CM.Strategy.timer.lastBuyCheck > 60000 ||
       !CM.Strategy.bestBuy.item) {
