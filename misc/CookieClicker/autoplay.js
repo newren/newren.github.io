@@ -221,7 +221,7 @@ CM.Strategy.handlePurchases = function() {
   if (CM.Cache.lastCookies >=
       CM.Strategy.bestBuffer + CM.Strategy.bestBuy.price) {
     if (Date.now() - CM.Strategy.timer.lastPurchase > 1000) {
-      console.log(`Bought ${CM.Strategy.bestBuy.name} at ${Date().toString()}`)
+      console.log(`Bought ${CM.Strategy.bestBuy.name} (with PP of ${CM.Disp.Beautify(CM.Strategy.bestBuy.pp)}) at ${Date().toString()}`)
       var orig = [Game.buyMode, Game.buyBulk];
       [Game.buyMode, Game.buyBulk] = [1, 1];
       CM.Strategy.bestBuy.obj.buy();
