@@ -46,7 +46,7 @@ CM.Strategy.shimmerAct = function() {
 CM.Strategy.popOne = function() {
   if (Date.now() - CM.Strategy.timer.lastPop > 1000) {
     Game.shimmers.some(function(shimmer) {
-      if (shimmer.wrath == 0) {
+      if (shimmer.type != 'golden' || shimmer.wrath == 0) {
         shimmer.pop();
         CM.Strategy.timer.lastPop = Date.now();
         setTimeout(CM.Strategy.shimmerAct, CM.Strategy.Interval(1000, 2000));
