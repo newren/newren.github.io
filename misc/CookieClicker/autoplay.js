@@ -134,7 +134,9 @@ CM.Strategy.determineBestBuy = function() {
   // Find the item with the lowest projected payoff
   lowestPP = Number.MAX_SAFE_INTEGER;
   best = {};
-  ignore = ["Golden switch [off]", "One mind"]
+  ignore = ["Golden switch [off]", "One mind",
+            "Festive biscuit", "Ghostly biscuit", "Lovesick biscuit",
+            "Fool's biscuit", "Bunny biscuit"]
   for (item in CM.Cache.Upgrades) {
     if (Game.Upgrades[item].unlocked) {
       if (ignore.indexOf(item) === -1) {
