@@ -158,7 +158,7 @@ CM.Strategy.determineBestBuy = function() {
   return best
 }
 
-CM.Strategy.expectedTimeUntilLucky = function() {
+CM.Strategy.luckyExpectations = function() {
   // Get information about how often cookies appear
   mint = Game.shimmerTypes.golden.minTime/Game.fps;
   maxt = Game.shimmerTypes.golden.maxTime/Game.fps;
@@ -181,19 +181,25 @@ CM.Strategy.expectedTimeUntilLucky = function() {
   // more fun to buy stuff; set a fudge factor.  Besides, the cookies from
   // a lucky don't compound; cookies from purchases do.
   fudge_factor = (Math.PI+Math.E)/3;
+  expected_lucky_time = fudge_factor * expected;
 
-  return fudge_factor * expected;
+  // Also compute how much we are almost certain we can earn before we
+  // get a golden cookie
+  min_reasonable_time_until_gc = Math.min(0, (5.0/12*maxt)-used);
+  cookies_before_gc = min_reasonable_time_until_gc * CM.Strategy.trueCpS;
+
+  return [expected_lucky_time, cookies_before_gc];
 }
 
 CM.Strategy.determineBankBuffer = function() {
-  if (Game.cookiesPs === 0 ||
-      CM.Strategy.bestBuy.pp < CM.Strategy.expectedTimeUntilLucky())
+  var [expected_time, cookies_before_gc] = CM.Strategy.luckyExpectations();
+  if (Game.cookiesPs === 0 || CM.Strategy.bestBuy.pp < expected_time)
     return 0;
   // FIXME: Extend the bank buffer if spells can be cast
   if (Game.Upgrades["Get lucky"].bought)
-    return CM.Cache.LuckyFrenzy;
+    return CM.Cache.LuckyFrenzy - cookies_before_gc;
   else
-    return CM.Cache.Lucky;
+    return CM.Cache.Lucky - cookies_before_gc;
 }
 
 CM.Strategy.original_remakepp = CM.Cache.RemakePP;
