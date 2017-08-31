@@ -4,6 +4,7 @@ CM.Strategy.timer = {};
 CM.Strategy.timer.lastPop = Date.now();
 CM.Strategy.timer.lastPurchase = Date.now();
 CM.Strategy.timer.lastBuyCheck = Date.now();
+CM.Strategy.timer.lastCheapBuy = Date.now();
 CM.Strategy.bestBuy = {};
 CM.Strategy.bestBuffer = 0;
 CM.Strategy.purchaseInterval = undefined;
@@ -103,15 +104,21 @@ CM.Strategy.getTruePP = function(item, price) {
     // I don't want upgrades to sit around forever unbought, so put some
     // some minimum pp for all upgrades; besides, it's possible we need one
     // upgrade to unlock others.
-    if (price < 1*CM.Strategy.trueCpS)
+    if (price < 1*CM.Strategy.trueCpS &&
+        Date.now() - CM.Strategy.timer.lastCheapBuy > 60000) {
+      CM.Strategy.timer.lastCheapBuy = Date.now();
       return 3.1415926535897932384626433832795; // arbitrary small number
+    }
     pp = CM.Cache.Upgrades[item].pp * CM.Strategy.currentBuff;
   } else if (CM.Cache.Objects[item]) {
     // Building also has value due to building special golden cookies, and
     // because it can unlock upgrades
     factor = Math.min(5, 0.5*Math.log10(CM.Strategy.trueCpS))
-    if (price < factor * CM.Strategy.trueCpS)
+    if (price < factor * CM.Strategy.trueCpS &&
+        Date.now() - CM.Strategy.timer.lastCheapBuy > 60000) {
+      CM.Strategy.timer.lastCheapBuy = Date.now();
       return 3.1415926535897932384626433832795; // arbitrary small number
+    }
     pp = CM.Cache.Objects[item].pp * CM.Strategy.currentBuff;
   }
   if (CM.Strategy.specialPPs[item])
