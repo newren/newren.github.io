@@ -73,7 +73,7 @@ CM.Strategy.cachePurchaseInfo = function() {
   CM.Strategy.specialPPs = {
     "Lucky day":   Game.Upgrades["Lucky day"].getPrice()  / .7/trueCpS,
     "Serendipity": Game.Upgrades["Serendipity"].getPrice()/1.4/trueCpS,
-    "Get Lucky":   Game.Upgrades["Get lucky"].getPrice()  /7.0/trueCpS,
+    "Get lucky":   Game.Upgrades["Get lucky"].getPrice()  /7.0/trueCpS,
   }
   mice = ["Plastic mouse",
           "Iron mouse",
