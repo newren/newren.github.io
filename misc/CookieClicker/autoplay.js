@@ -1,5 +1,6 @@
 CM.Strategy = {};
 CM.Strategy.oldPlaySound = CM.Disp.PlaySound;
+CM.Strategy.oldRemakePP = CM.Cache.RemakePP;
 CM.Strategy.timer = {};
 CM.Strategy.timer.lastPop = Date.now();
 CM.Strategy.timer.lastPurchase = Date.now();
@@ -62,14 +63,6 @@ CM.Strategy.popOne = function() {
 
 CM.Strategy.ShimmerAppeared = function() {
   setTimeout(CM.Strategy.popOne, CM.Strategy.Interval(3000, 4000))
-}
-
-CM.Disp.PlaySound = function(url) {
-  // CM.Disp.PlaySound is called unconditionally, but then checks the options
-  // to determine whether to actually play the sound, so even if the sound
-  // option is off, we can use this to auto-click golden cookies.  :-)
-  CM.Strategy.ShimmerAppeared();
-  CM.Strategy.oldPlaySound(url);
 }
 
 CM.Strategy.cachePurchaseInfo = function() {
@@ -211,17 +204,6 @@ CM.Strategy.determineBankBuffer = function() {
     return CM.Cache.Lucky - cookies_before_gc;
 }
 
-CM.Strategy.original_remakepp = CM.Cache.RemakePP;
-CM.Cache.RemakePP = function() {
-  CM.Strategy.original_remakepp();
-
-  // Determine currentBuff and trueCpS, not temporary CpS going on now
-  mult = 1;
-  Object.keys(Game.buffs).forEach(name => {mult *= Game.buffs[name].multCpS});
-  CM.Strategy.currentBuff = mult;
-  CM.Strategy.trueCpS = Game.cookiesPs / CM.Strategy.currentBuff;
-}
-
 CM.Strategy.handlePurchases = function() {
   // Don't buy upgrades or buildings while in a clickfest
   if (CM.Strategy.clickInterval)
@@ -251,3 +233,25 @@ CM.Strategy.handlePurchases = function() {
 }
 
 CM.Strategy.purchaseInterval = setInterval(CM.Strategy.handlePurchases, 1000)
+
+//
+// Monkey patching to hook into the relevant parts of CookieMonster follow
+//
+
+CM.Disp.PlaySound = function(url) {
+  // CM.Disp.PlaySound is called unconditionally, but then checks the options
+  // to determine whether to actually play the sound, so even if the sound
+  // option is off, we can use this to auto-click golden cookies.  :-)
+  CM.Strategy.ShimmerAppeared();
+  CM.Strategy.oldPlaySound(url);
+}
+
+CM.Cache.RemakePP = function() {
+  CM.Strategy.oldRemakePP()
+
+  // Determine currentBuff and trueCpS, not temporary CpS going on now
+  mult = 1;
+  Object.keys(Game.buffs).forEach(name => {mult *= Game.buffs[name].multCpS});
+  CM.Strategy.currentBuff = mult;
+  CM.Strategy.trueCpS = Game.cookiesPs / CM.Strategy.currentBuff;
+}
