@@ -4,7 +4,6 @@ CM.Strategy.oldRemakePP = CM.Cache.RemakePP;
 CM.Strategy.timer = {};
 CM.Strategy.timer.lastPop = Date.now();
 CM.Strategy.timer.lastPurchaseCheck = Date.now();
-CM.Strategy.timer.lastBuyCheck = Date.now();
 CM.Strategy.timer.lastCheapBuy = Date.now();
 CM.Strategy.bestBuy = {};
 CM.Strategy.bestBuffer = 0;
@@ -213,15 +212,20 @@ CM.Strategy.handlePurchases = function() {
   if (CM.Strategy.clickInterval)
     return;
 
-  // Re-determine the best thing to purchase, if it's been long enough
-  if (Date.now() - CM.Strategy.timer.lastBuyCheck > 60000 ||
-      !CM.Strategy.bestBuy.item) {
-    CM.Strategy.bestBuy = CM.Strategy.determineBestBuy();
-    CM.Strategy.timer.lastBuyCheck = Date.now();
-  }
+  // Don't bother computing best thing to purchase if we already know we
+  // don't have enough.
   CM.Strategy.bestBuffer = CM.Strategy.determineBankBuffer();
+  if (CM.Cache.lastCookies < CM.Strategy.bestBuffer)
+    return;
 
-  // If we have enough cookies, make the purchase
+  // Find out what to purchase
+  CM.Strategy.bestBuy = CM.Strategy.determineBestBuy();
+  if (!CM.Strategy.bestBuy.name) {
+    console.error("Something is wrong; couldn't find a best buy.");
+    return;
+  }
+
+  // Purchase if we have enough
   if (CM.Cache.lastCookies >=
       CM.Strategy.bestBuffer + CM.Strategy.bestBuy.price) {
     console.log(`Bought ${CM.Strategy.bestBuy.name} `+
