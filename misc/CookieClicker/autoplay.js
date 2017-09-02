@@ -8,6 +8,22 @@ CM.Strategy.timer.lastCheapBuy = Date.now();
 CM.Strategy.bestBuy = {};
 CM.Strategy.bestBuffer = 0;
 CM.Strategy.clickInterval = undefined;
+CM.Strategy.currentBuff = 1;
+CM.Strategy.specialPPfactor =
+  { "Lucky day":          0.7,
+    "Serendipity":        1.4,
+    "Get lucky":          7.0,
+    "Plastic mouse" :     0.01,
+    "Iron mouse" :        0.01,
+    "Titanium mouse" :    0.01,
+    "Adamantium mouse" :  0.01,
+    "Unobtainium mouse" : 0.01,
+    "Eludium mouse" :     0.01,
+    "Wishalloy mouse" :   0.01,
+    "Fantasteel mouse" :  0.01,
+    "Nevercrack mouse" :  0.01,
+    "Armythril mouse" :   0.01,
+  }
 
 CM.Strategy.Interval = function(lower, upper) {
   return lower + (upper-lower)*Math.random();
@@ -63,57 +79,37 @@ CM.Strategy.ShimmerAppeared = function() {
   setTimeout(CM.Strategy.popOne, CM.Strategy.Interval(3000, 4000))
 }
 
-CM.Strategy.cachePurchaseInfo = function() {
-  // get a short name for a value we use repeatedly below
-  trueCpS = CM.Strategy.trueCpS;
-
-  // Second, compute a projected payoff for special items; CookieMonster just
-  // gives Infinity for all of these.
-  CM.Strategy.specialPPs = {
-    "Lucky day":   Game.Upgrades["Lucky day"].getPrice()  / .7/trueCpS,
-    "Serendipity": Game.Upgrades["Serendipity"].getPrice()/1.4/trueCpS,
-    "Get lucky":   Game.Upgrades["Get lucky"].getPrice()  /7.0/trueCpS,
-  }
-  mice = ["Plastic mouse",
-          "Iron mouse",
-          "Titanium mouse",
-          "Adamantium mouse",
-          "Unobtainium mouse",
-          "Eludium mouse",
-          "Wishalloy mouse",
-          "Fantasteel mouse",
-          "Nevercrack mouse",
-          "Armythril mouse"]
-  mice.forEach(mouse =>
-               {CM.Strategy.specialPPs[mouse] =
-                   Game.Upgrades[mouse].getPrice() / 0.01/trueCpS})
-}
-
 CM.Strategy.getTruePP = function(item, price) {
   pp = NaN; // pp == Projected Payoff, mostly calculated by CookieMonster
+  cps = CM.Strategy.trueCpS;
   if (CM.Cache.Upgrades[item]) {
     // I don't want upgrades to sit around forever unbought, so put some
     // some minimum pp for all upgrades; besides, it's possible we need one
     // upgrade to unlock others.
-    if (price < 1*CM.Strategy.trueCpS &&
-        Date.now() - CM.Strategy.timer.lastCheapBuy > 60000) {
+    if (price < 1*cps && Date.now() - CM.Strategy.timer.lastCheapBuy > 60000) {
       CM.Strategy.timer.lastCheapBuy = Date.now();
       return 3.1415926535897932384626433832795; // arbitrary small number
     }
-    pp = CM.Cache.Upgrades[item].pp * CM.Strategy.currentBuff;
+    // Do a special computation of projected payoff for particular items that
+    // CookieMonster simply returns Infinity for.
+    special_factor = CM.Strategy.specialPPfactor[item]
+    if (special_factor) {
+      pp = Game.Upgrades[item].getPrice() / special_factor / cps;
+    } else {
+      pp = CM.Cache.Upgrades[item].pp * CM.Strategy.currentBuff;
+    }
   } else if (CM.Cache.Objects[item]) {
     // Building also has value due to building special golden cookies, and
     // because it can unlock upgrades
-    factor = Math.min(5, 0.5*Math.log10(CM.Strategy.trueCpS))
-    if (price < factor * CM.Strategy.trueCpS &&
-        Date.now() - CM.Strategy.timer.lastCheapBuy > 60000) {
+    f = Math.min(5, 0.5*Math.log10(cps))
+    if (price < f*cps && Date.now() - CM.Strategy.timer.lastCheapBuy > 60000) {
       CM.Strategy.timer.lastCheapBuy = Date.now();
       return 3.1415926535897932384626433832795; // arbitrary small number
     }
     pp = CM.Cache.Objects[item].pp * CM.Strategy.currentBuff;
   }
-  if (CM.Strategy.specialPPs[item])
-    pp = CM.Strategy.specialPPs[item]
+
+  // Return what we found
   return pp;
 }
 
@@ -125,9 +121,6 @@ CM.Strategy.determineBestBuy = function() {
     return {name: "Cursor", price: Game.Objects.Cursor.getPrice(),
             pp: CM.Cache.Objects.Cursor.pp, obj: Game.Objects.Cursor}
   }
-
-  // Determine the current buff so we can get corrected pp values
-  CM.Strategy.cachePurchaseInfo();
 
   // Find the item with the lowest projected payoff
   lowestPP = Number.MAX_SAFE_INTEGER;
