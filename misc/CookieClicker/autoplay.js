@@ -170,9 +170,15 @@ CM.Strategy.luckyExpectations = function() {
   // Compute the expected time
   expected = ave * factors[lastType].full - used * factors[lastType].prob;
 
-  // Even if probabilistically it's better to wait for Lucky buffer, it's
-  // more fun to buy stuff; set a fudge factor.  Besides, the cookies from
-  // a lucky don't compound; cookies from purchases do.
+  // Even if probabilistically it's better to wait for "Lucky" golden cookie,
+  // it's more fun to buy stuff early on, so set a fudge factor.  Besides,
+  // sometimes the purchases have compounding effects.  For example,
+  // purchasing farmer grandmas make farms more effective (already factored
+  // into the PP of "farmer grandmas"), but will ALSO make future grandma
+  // and farm purchases have a lower PP after the purchase.  We may well want
+  // to buy those "more effective" grandmas and farms, but CookieMonster
+  // won't display them to us until we have bought the upgrade.  So, err on
+  // the side of purchasing.
   fudge_factor = (Math.PI+Math.E)/3;
   expected_lucky_time = fudge_factor * expected;
 
