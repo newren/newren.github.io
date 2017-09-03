@@ -4,11 +4,19 @@ CM.Strategy.oldRemakePP = CM.Cache.RemakePP;
 CM.Strategy.timer = {};
 CM.Strategy.timer.lastPop = Date.now();
 CM.Strategy.timer.lastPurchaseCheck = Date.now();
-CM.Strategy.timer.lastCheapBuy = Date.now();
 CM.Strategy.bestBuy = {};
 CM.Strategy.bestBuffer = 0;
 CM.Strategy.clickInterval = undefined;
 CM.Strategy.currentBuff = 1;
+CM.Strategy.prevBuff = 0;
+CM.Strategy.upgradesToIgnore = [
+    "Golden switch [off]",
+    "One mind",
+    "Festive biscuit",
+    "Ghostly biscuit",
+    "Lovesick biscuit",
+    "Fool's biscuit",
+    "Bunny biscuit"]
 CM.Strategy.specialPPfactor =
   { "Lucky day":          0.7,
     "Serendipity":        1.4,
@@ -83,13 +91,6 @@ CM.Strategy.getTruePP = function(item, price) {
   pp = NaN; // pp == Projected Payoff, mostly calculated by CookieMonster
   cps = CM.Strategy.trueCpS;
   if (CM.Cache.Upgrades[item]) {
-    // I don't want upgrades to sit around forever unbought, so put some
-    // some minimum pp for all upgrades; besides, it's possible we need one
-    // upgrade to unlock others.
-    if (price < 1*cps && Date.now() - CM.Strategy.timer.lastCheapBuy > 60000) {
-      CM.Strategy.timer.lastCheapBuy = Date.now();
-      return 3.1415926535897932384626433832795; // arbitrary small number
-    }
     // Do a special computation of projected payoff for particular items that
     // CookieMonster simply returns Infinity for.
     special_factor = CM.Strategy.specialPPfactor[item]
@@ -99,13 +100,6 @@ CM.Strategy.getTruePP = function(item, price) {
       pp = CM.Cache.Upgrades[item].pp * CM.Strategy.currentBuff;
     }
   } else if (CM.Cache.Objects[item]) {
-    // Building also has value due to building special golden cookies, and
-    // because it can unlock upgrades
-    f = Math.min(5, 0.5*Math.log10(cps))
-    if (price < f*cps && Date.now() - CM.Strategy.timer.lastCheapBuy > 60000) {
-      CM.Strategy.timer.lastCheapBuy = Date.now();
-      return 3.1415926535897932384626433832795; // arbitrary small number
-    }
     pp = CM.Cache.Objects[item].pp * CM.Strategy.currentBuff;
   }
 
@@ -113,7 +107,29 @@ CM.Strategy.getTruePP = function(item, price) {
   return pp;
 }
 
-CM.Strategy.determineBestBuy = function() {
+CM.Strategy.getCheapItem = function(item, price) {
+  pp = NaN; // pp == Projected Payoff, mostly calculated by CookieMonster
+  cps = CM.Strategy.trueCpS;
+  if (CM.Cache.Upgrades[item]) {
+    // I don't want upgrades to sit around forever unbought, so put some
+    // some minimum pp for all upgrades; besides, it's possible we need one
+    // upgrade to unlock others.
+    if (price < 1*cps)
+      return 3.1415926535897932384626433832795; // arbitrary small number
+  } else if (CM.Cache.Objects[item]) {
+    // Building not only have the potential to unlock upgrades, they also
+    // have value due to "building special" golden cookies so consider them
+    // cheap up to a bit higher limits than upgrades.
+    f = Math.min(5, 0.5*Math.log10(cps))
+    if (price < f*cps)
+      return 3.1415926535897932384626433832795; // arbitrary small number
+  }
+
+  // Return what we found
+  return pp;
+}
+
+CM.Strategy.determineBestBuy = function(metric) {
   // First purchase is always a Cursor.  Also, when we haven't yet bought
   // anything, pp for all upgrades is NaN or Infinity, so we really do
   // need a special case here.
@@ -125,14 +141,11 @@ CM.Strategy.determineBestBuy = function() {
   // Find the item with the lowest projected payoff
   lowestPP = Number.MAX_SAFE_INTEGER;
   best = {};
-  ignore = ["Golden switch [off]", "One mind",
-            "Festive biscuit", "Ghostly biscuit", "Lovesick biscuit",
-            "Fool's biscuit", "Bunny biscuit"]
   for (item in CM.Cache.Upgrades) {
     if (Game.Upgrades[item].unlocked) {
-      if (ignore.indexOf(item) === -1) {
+      if (CM.Strategy.upgradesToIgnore.indexOf(item) === -1) {
         price = Game.Upgrades[item].getPrice();
-        pp = CM.Strategy.getTruePP(item, price);
+        pp = metric(item, price);
         if (pp < lowestPP) {
           lowestPP = pp;
           best = {name: item, price: price, pp: pp, obj: Game.Upgrades[item]}
@@ -142,7 +155,7 @@ CM.Strategy.determineBestBuy = function() {
   }
   for (item in CM.Cache.Objects) {
     price = Game.Objects[item].getPrice();
-    pp = CM.Strategy.getTruePP(item, price);
+    pp = metric(item, price);
     if (pp < lowestPP) {
       lowestPP = pp;
       best = {name: item, price: price, pp: pp, obj: Game.Objects[item]}
@@ -218,11 +231,16 @@ CM.Strategy.handlePurchases = function() {
     return;
 
   // Find out what to purchase
-  CM.Strategy.bestBuy = CM.Strategy.determineBestBuy();
+  CM.Strategy.bestBuy = CM.Strategy.determineBestBuy(CM.Strategy.getTruePP);
   if (!CM.Strategy.bestBuy.name) {
     console.error("Something is wrong; couldn't find a best buy.");
     return;
   }
+
+  // If we don't have enough, check for cheap items
+  if (CM.Cache.lastCookies <
+      CM.Strategy.bestBuffer + CM.Strategy.bestBuy.price)
+    CM.Strategy.bestBuy=CM.Strategy.determineBestBuy(CM.Strategy.getCheapItem);
 
   // Purchase if we have enough
   if (CM.Cache.lastCookies >=
