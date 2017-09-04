@@ -237,20 +237,34 @@ CM.Strategy.handlePurchases = function() {
     return;
   }
 
-  // If we don't have enough, check for cheap items
+  // If we don't have enough to buy the best item, check for super cheap items
   if (CM.Cache.lastCookies <
-      CM.Strategy.bestBuffer + CM.Strategy.bestBuy.price)
+      CM.Strategy.bestBuffer + CM.Strategy.bestBuy.price) {
     CM.Strategy.bestBuy=CM.Strategy.determineBestBuy(CM.Strategy.getCheapItem);
+  }
 
   // Purchase if we have enough
   if (CM.Cache.lastCookies >=
       CM.Strategy.bestBuffer + CM.Strategy.bestBuy.price) {
-    console.log(`Bought ${CM.Strategy.bestBuy.name} `+
+
+    // Determine if we should buy in bulk
+    bulk_amount = 1;
+    for (count of [10, 100]) {
+      cost_factor = (Math.pow(1.15,count) - 1) / (1.15 - 1);
+      total_cost = CM.Strategy.bestBuy.price * cost_factor;
+      if (total_cost < 5*CM.Strategy.trueCpS &&
+          CM.Cache.lastCookies >= CM.Strategy.bestBuffer + total_cost)
+        bulk_amount = count;
+    }
+
+    // Log what we're doing
+    console.log(`Bought ${bulk_amount} ${CM.Strategy.bestBuy.name}(s) `+
                 `(with PP of ${CM.Disp.Beautify(CM.Strategy.bestBuy.pp)}) ` +
                 `at ${Date().toString()}`)
-    // Make sure we only buy 1
+
+    // Make sure we buy bulk_amount
     var orig = [Game.buyMode, Game.buyBulk];
-    [Game.buyMode, Game.buyBulk] = [1, 1];
+    [Game.buyMode, Game.buyBulk] = [1, bulk_amount];
 
     // Buy it.
     CM.Strategy.bestBuy.obj.buy();
