@@ -297,7 +297,8 @@ CM.Cache.RemakePP = function() {
 
   // Determine currentBuff and trueCpS, not temporary CpS going on now
   mult = 1;
-  Object.keys(Game.buffs).forEach(name => {mult *= Game.buffs[name].multCpS});
+  Object.keys(Game.buffs).forEach(name => {
+    if (Game.buffs[name].multCpS) mult *= Game.buffs[name].multCpS});
   CM.Strategy.currentBuff = mult;
   CM.Strategy.trueCpS = Game.cookiesPs / CM.Strategy.currentBuff;
 
