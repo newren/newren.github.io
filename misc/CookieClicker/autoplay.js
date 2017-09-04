@@ -84,7 +84,9 @@ CM.Strategy.popOne = function() {
 }
 
 CM.Strategy.ShimmerAppeared = function() {
-  setTimeout(CM.Strategy.popOne, CM.Strategy.Interval(3000, 4000))
+  min = 1000 * (1 + Game.shimmers[Game.shimmers.length-1].dur / 12)
+  max = min + 4000
+  setTimeout(CM.Strategy.popOne, CM.Strategy.Interval(min, max))
 }
 
 CM.Strategy.getTruePP = function(item, price) {
