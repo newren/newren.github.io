@@ -88,7 +88,8 @@ CM.Strategy.ShimmerAppeared = function() {
 }
 
 CM.Strategy.getTruePP = function(item, price) {
-  pp = NaN; // pp == Projected Payoff, mostly calculated by CookieMonster
+  // pp == Projected Payoff, mostly calculated by CookieMonster
+  pp = Number.MAX_VALUE;
   cps = CM.Strategy.trueCpS;
   if (CM.Cache.Upgrades[item]) {
     // Do a special computation of projected payoff for particular items that
@@ -108,7 +109,10 @@ CM.Strategy.getTruePP = function(item, price) {
 }
 
 CM.Strategy.getCheapItem = function(item, price) {
-  pp = NaN; // pp == Projected Payoff, mostly calculated by CookieMonster
+  // pp == Projected Payoff, mostly calculated by CookieMonster.  We're not
+  // actually calculating PP here, just returning a random small value if an
+  // item is considered cheap enough.
+  pp = Number.MAX_VALUE;
   cps = CM.Strategy.trueCpS;
   if (CM.Cache.Upgrades[item]) {
     // I don't want upgrades to sit around forever unbought, so put some
@@ -139,7 +143,7 @@ CM.Strategy.determineBestBuy = function(metric) {
   }
 
   // Find the item with the lowest projected payoff
-  lowestPP = Number.MAX_SAFE_INTEGER;
+  lowestPP = Number.MAX_VALUE;
   best = {};
   for (item in CM.Cache.Upgrades) {
     if (Game.Upgrades[item].unlocked) {
