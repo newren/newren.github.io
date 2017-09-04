@@ -53,6 +53,9 @@ CM.Strategy.doClicking = function() {
     if (!CM.Strategy.clickingNeeded()) {
       clearInterval(CM.Strategy.clickInterval);
       CM.Strategy.clickInterval = undefined;
+      // Make there be a good gap between a clicking frenzy and any purchase
+      // automatically made afterward.
+      CM.Strategy.timer.lastPurchaseCheck = Date.now() + 5000;
     }
   }
 }
@@ -222,7 +225,7 @@ CM.Strategy.determineBankBuffer = function() {
 
 CM.Strategy.handlePurchases = function() {
   // Don't run this function too often
-  if (Date.now() - CM.Strategy.timer.lastPurchaseCheck < 1000)
+  if (Date.now() - CM.Strategy.timer.lastPurchaseCheck < 5000)
     return;
   CM.Strategy.timer.lastPurchaseCheck = Date.now();
 
