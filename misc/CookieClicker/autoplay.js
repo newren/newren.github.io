@@ -223,8 +223,17 @@ CM.Strategy.determineBankBuffer = function(item_pp) {
   if (Game.cookiesPs === 0 || item_pp < expected_time)
     return 0;
   // FIXME: Extend the bank buffer if spells can be cast
-  if (Game.Upgrades["Get lucky"].bought)
-    return CM.Cache.LuckyFrenzy - cookies_before_gc;
+  if (Game.Upgrades["Get lucky"].bought) {
+    if (Game.Objects["Wizard tower"].minigame &&
+        Game.Objects["Wizard tower"].minigame.magicM >= 20)
+      // Frenzy + (DragonHarvest | BuildingSpecial) + Conjure Baked Goods:
+      //   Conjure Baked Goods is basically 2x lucky (if buffer of cookies in
+      //   bank is enough), so if we assume BuildingSpecial == DragonHarvest
+      //   (== 15), then we need 2*15*LuckyFrenzy.
+      return 15*CM.Cache.LuckyFrenzy - cookies_before_gc;
+    else
+      return CM.Cache.LuckyFrenzy - cookies_before_gc;
+  }
   else
     return CM.Cache.Lucky - cookies_before_gc;
 }
