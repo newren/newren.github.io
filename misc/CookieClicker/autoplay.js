@@ -256,12 +256,14 @@ CM.Strategy.handlePurchases = function() {
 
     // Determine if we should buy in bulk
     bulk_amount = 1;
-    for (count of [10, 100]) {
-      cost_factor = (Math.pow(1.15,count) - 1) / (1.15 - 1);
-      total_cost = CM.Strategy.bestBuy.price * cost_factor;
-      if (total_cost < 5*CM.Strategy.trueCpS &&
-          CM.Cache.lastCookies >= CM.Strategy.bestBuffer + total_cost)
-        bulk_amount = count;
+    if (bestBuy.name in Game.Objects) {
+      for (count of [10, 100]) {
+        cost_factor = (Math.pow(1.15,count) - 1) / (1.15 - 1);
+        total_cost = bestBuy.price * cost_factor;
+        if (total_cost < 5*CM.Strategy.trueCpS &&
+            CM.Cache.lastCookies >= total_cost)
+          bulk_amount = count;
+      }
     }
 
     // Log what we're doing
