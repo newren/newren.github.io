@@ -4,8 +4,6 @@ CM.Strategy.oldRemakePP = CM.Cache.RemakePP;
 CM.Strategy.timer = {};
 CM.Strategy.timer.lastPop = Date.now();
 CM.Strategy.timer.lastPurchaseCheck = Date.now();
-CM.Strategy.bestBuy = {};
-CM.Strategy.bestBuffer = 0;
 CM.Strategy.clickInterval = undefined;
 CM.Strategy.currentBuff = 1;
 CM.Strategy.prevBuff = 0;
@@ -212,9 +210,9 @@ CM.Strategy.luckyExpectations = function() {
   return [expected_lucky_time, cookies_before_gc];
 }
 
-CM.Strategy.determineBankBuffer = function() {
+CM.Strategy.determineBankBuffer = function(item_pp) {
   var [expected_time, cookies_before_gc] = CM.Strategy.luckyExpectations();
-  if (Game.cookiesPs === 0 || CM.Strategy.bestBuy.pp < expected_time)
+  if (Game.cookiesPs === 0 || item_pp < expected_time)
     return 0;
   // FIXME: Extend the bank buffer if spells can be cast
   if (Game.Upgrades["Get lucky"].bought)
@@ -233,28 +231,20 @@ CM.Strategy.handlePurchases = function() {
   if (CM.Strategy.clickInterval)
     return;
 
-  // Don't bother computing best thing to purchase if we already know we
-  // don't have enough.
-  CM.Strategy.bestBuffer = CM.Strategy.determineBankBuffer();
-  if (CM.Cache.lastCookies < CM.Strategy.bestBuffer)
-    return;
-
   // Find out what to purchase
-  CM.Strategy.bestBuy = CM.Strategy.determineBestBuy(CM.Strategy.getTruePP);
-  if (!CM.Strategy.bestBuy.name) {
-    console.error("Something is wrong; couldn't find a best buy.");
-    return;
-  }
+  bestBuy = CM.Strategy.determineBestBuy(CM.Strategy.getTruePP);
+  bestBuffer = CM.Strategy.determineBankBuffer(bestBuy.pp);
 
   // If we don't have enough to buy the best item, check for super cheap items
-  if (CM.Cache.lastCookies <
-      CM.Strategy.bestBuffer + CM.Strategy.bestBuy.price) {
-    CM.Strategy.bestBuy=CM.Strategy.determineBestBuy(CM.Strategy.getCheapItem);
+  if (CM.Cache.lastCookies < bestBuffer + bestBuy.price) {
+    bestBuy = CM.Strategy.determineBestBuy(CM.Strategy.getCheapItem);
+    // bestBuy could be {} here
+    if (bestBuy.name)
+      bestBuffer = 0;
   }
 
   // Purchase if we have enough
-  if (CM.Cache.lastCookies >=
-      CM.Strategy.bestBuffer + CM.Strategy.bestBuy.price) {
+  if (bestBuy.price && CM.Cache.lastCookies >= bestBuffer + bestBuy.price) {
 
     // Determine if we should buy in bulk
     bulk_amount = 1;
@@ -267,8 +257,8 @@ CM.Strategy.handlePurchases = function() {
     }
 
     // Log what we're doing
-    console.log(`Bought ${bulk_amount} ${CM.Strategy.bestBuy.name}(s) `+
-                `(with PP of ${CM.Disp.Beautify(CM.Strategy.bestBuy.pp)}) ` +
+    console.log(`Bought ${bulk_amount} ${bestBuy.name}(s) `+
+                `(with PP of ${CM.Disp.Beautify(bestBuy.pp)}) ` +
                 `at ${Date().toString()}`)
 
     // Make sure we buy bulk_amount
@@ -276,12 +266,10 @@ CM.Strategy.handlePurchases = function() {
     [Game.buyMode, Game.buyBulk] = [1, bulk_amount];
 
     // Buy it.
-    CM.Strategy.bestBuy.obj.buy();
+    bestBuy.obj.buy();
 
-    // restore values we temporarily over-wrote, and blank out bestBuy for
-    // next time
+    // restore values we temporarily over-wrote
     [Game.buyMode, Game.buyBulk] = orig;
-    CM.Strategy.bestBuy = {};
   }
 }
 
