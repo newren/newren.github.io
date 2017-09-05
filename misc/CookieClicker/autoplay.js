@@ -9,12 +9,20 @@ CM.Strategy.currentBuff = 1;
 CM.Strategy.prevBuff = 0;
 CM.Strategy.upgradesToIgnore = [
     "Golden switch [off]",
+    "Golden switch [on]",
+    "Background selector",
+    "Milk selector",
     "One mind",
+    "Communal brainsweep",
+    "Elder Pact",
+    "Elder Covenant",
+    "Elder Pledge",
     "Festive biscuit",
     "Ghostly biscuit",
     "Lovesick biscuit",
     "Fool's biscuit",
-    "Bunny biscuit"]
+    "Bunny biscuit",
+    "Chocolate egg"]
 CM.Strategy.specialPPfactor =
   { "Lucky day":          0.7,
     "Serendipity":        1.4,
