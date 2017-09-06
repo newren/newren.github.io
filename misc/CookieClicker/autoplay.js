@@ -6,6 +6,7 @@ CM.Strategy.timer.lastPop = Date.now();
 CM.Strategy.timer.lastPurchaseCheck = Date.now();
 CM.Strategy.spiritOfRuinDelayTokens = 0;
 CM.Strategy.spiritOfRuinDelayBeforeBuying = false;
+CM.Strategy.logHandOfFateCookie = false;
 CM.Strategy.clickInterval = undefined;
 CM.Strategy.currentBuff = 1;
 CM.Strategy.prevBuff = 0;
@@ -157,6 +158,7 @@ CM.Strategy.hand_of_fate_if_good_time = function() {
       (Game.buffs["Dragon Harvest"] || building_special)) {
     // Cast the hand of fate, and trigger a timeout to act on it
     grimoire.castSpell(grimoire.spells["hand of fate"])
+    CM.Strategy.logHandOfFateCookie = true;
     setTimeout(CM.Strategy.shimmerAct, CM.Strategy.Interval(3000, 4000))
   }
 }
@@ -186,7 +188,19 @@ CM.Strategy.popOne = function() {
         shimmer.pop();
         CM.Strategy.timer.lastPop = Date.now();
         setTimeout(CM.Strategy.shimmerAct, CM.Strategy.Interval(1000, 2000));
+        if (CM.Strategy.logHandOfFateCookie) {
+          CM.Strategy.logHandOfFateCookie = false;
+          console.log(`Hand of Fate resulted in ` +
+                      `${Game.shimmerTypes.golden.last} ` +
+                      `golden cookie at ${Date().toString()}`)
+        }
         return true;
+      }
+      else if (CM.Strategy.logHandOfFateCookie &&
+               shimmer.type === 'golden' && shimmer.wrath) {
+        CM.Strategy.logHandOfFateCookie = false;
+        console.log(`Hand of Fate resulted in wrath cookie at ` +
+                    `${Date().toString()}`)
       }
     });
   } else if (Game.shimmers.length) {
