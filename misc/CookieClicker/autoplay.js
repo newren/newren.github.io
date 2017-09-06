@@ -66,14 +66,40 @@ CM.Strategy.doClicking = function() {
   }
 }
 
+CM.Strategy.hand_of_fate_if_good_time = function() {
+  // Every building special is named something different in Game.buffs; we
+  // have to look at Game.buffs[whatever].type.name instead and compare to
+  // "building buff"
+  building_special = Object.entries(Game.buffs).some(([key,buff]) =>
+                                    {return buff.type.name == "building buff"})
+  grimoire = Game.Objects["Wizard tower"].minigame
+  // If our magic is at least half way between needed to cast HandOfFate and
+  // full, and we have Frenzy plus either DragonHarvest or BuildingSpecial
+  if (grimoire.magic > 5 + 0.8 * grimoire.magicM &&
+      Game.buffs["Frenzy"] &&
+      (Game.buffs["Dragon Harvest"] || building_special)) {
+    // Cast the hand of fate, and trigger a timeout to act on it
+    grimoire.castSpell(grimoire.spells["hand of fate"])
+    setTimeout(CM.Strategy.shimmerAct, CM.Strategy.Interval(3000, 4000))
+  }
+}
+
 CM.Strategy.shimmerAct = function() {
   // shimmerAppeared() won't be called after initiating cookie for cookie
   // chains and cookie Storms, so we need to check if there are more cookies
   // manually here.
   if (Game.shimmers.length)
     CM.Strategy.popOne();
+
+  // After a golden cookie is clicked, check to see if it was one that
+  // needs lots of clicking on the big cookie
   if (!CM.Strategy.clickInterval && CM.Strategy.clickingNeeded())
     CM.Strategy.clickInterval = setInterval(CM.Strategy.doClicking, 100);
+
+  // Otherwise, check to see if we want to take advantage of some spell
+  // casting
+  else if (Game.Objects["Wizard tower"].minigame)
+    CM.Strategy.hand_of_fate_if_good_time()
 }
 
 CM.Strategy.popOne = function() {
