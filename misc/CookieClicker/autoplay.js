@@ -4,6 +4,8 @@ CM.Strategy.oldRemakePP = CM.Cache.RemakePP;
 CM.Strategy.timer = {};
 CM.Strategy.timer.lastPop = Date.now();
 CM.Strategy.timer.lastPurchaseCheck = Date.now();
+CM.Strategy.spiritOfRuinDelayTokens = 0;
+CM.Strategy.spiritOfRuinDelayBeforeBuying = false;
 CM.Strategy.clickInterval = undefined;
 CM.Strategy.currentBuff = 1;
 CM.Strategy.prevBuff = 0;
@@ -49,7 +51,82 @@ CM.Strategy.clickingNeeded = function() {
   return !!Game.buffs["Click frenzy"] || !!Game.buffs["Dragonflight"];
 }
 
+CM.Strategy.costToPurchase = function(count, base_price) {
+  cost_factor = (Math.pow(1.15,count) - 1) / (1.15 - 1);
+  return cost_factor * base_price;
+}
+
+CM.Strategy.spiritOfRuinActions = function() {
+  action_taken = true;
+
+  // If the buff ends for needing to click, don't bother taking any further
+  // action.
+  if (!CM.Strategy.clickingNeeded()) {
+    CM.Strategy.spiritOfRuinDelayTokens = 0;
+    CM.Strategy.spiritOfRuinDelayBeforeBuying = false;
+    return !action_taken;
+  }
+
+  // Whenever we previously took an action, we need to delay a bit before
+  // taking another, to mimic how a real human would behave.
+  if (CM.Strategy.spiritOfRuinDelayTokens > 0) {
+    CM.Strategy.spiritOfRuinDelayTokens -= 1;
+    // Technically we didn't take an action, but we pretend we did because
+    // we don't want clicking on the big cookie to happen during our
+    // "delay before next action"
+    return action_taken;
+  }
+
+  // If pantheon minigame available and spirit of ruin selected and we don't
+  // already have a buff from the spirit of ruin
+  pantheon = Game.Objects["Temple"].minigame;
+  if (pantheon && Game.hasGod("ruin") && !Game.buffs["Devastation"]) {
+
+    // Determine if we need to buy more cursors
+    base_cursor_cost = Game.Objects.Cursor.getPrice();
+    cursor_cost = CM.Strategy.costToPurchase(100, base_cursor_cost);
+    if (cursor_cost < CM.Strategy.trueCpS) {
+
+      // We should not buy immediately after a Devastation buff ends; there
+      // should be some kind of natural delay.
+      if (CM.Strategy.spiritOfRuinDelayBeforeBuying) {
+        CM.Strategy.spiritOfRuinDelayBeforeBuying = false;
+        CM.Strategy.spiritOfRuinDelayTokens = CM.Strategy.Interval(5, 7);
+        return action_taken;
+      }
+
+      // Buy cursors!
+      [oldMode, Game.buyMode] = [Game.buyMode, 1];
+      Game.Objects.Cursor.buy(100);
+      Game.buyMode = oldMode;
+      Game.Objects.Cursor.refresh();
+      CM.Strategy.spiritOfRuinDelayTokens = CM.Strategy.Interval(1, 3);
+      return action_taken;
+
+    } else if (Game.Objects.Cursor.amount &&
+               Game.buffs["Click frenzy"].time/Game.fps > 5) {
+      // Sell cursors!
+      Game.Objects.Cursor.sell(-1);
+      Game.Objects.Cursor.refresh();
+      CM.Strategy.spiritOfRuinDelayTokens = CM.Strategy.Interval(4, 6);
+      CM.Strategy.spiritOfRuinDelayBeforeBuying = true;
+      return action_taken;
+    }
+  }
+
+  // We didn't do anything, let caller know they can click the big cookie
+  return !action_taken;
+}
+
 CM.Strategy.doClicking = function() {
+  // Check if we can boost our click power by buying and selling buildings
+  if (CM.Strategy.spiritOfRuinActions()) {
+    // Buying and selling buildings and simultaneously clicking on the big
+    // cookie isn't something a human would be able to do, so just return
+    // early.
+    return
+  }
+
   // We're called every .1 seconds, want some randomness to our clicking,
   // and want to average about 5 clicks per second
   if (Math.random() < 1/2) {
@@ -293,8 +370,7 @@ CM.Strategy.handlePurchases = function() {
     bulk_amount = 1;
     if (bestBuy.name in Game.Objects) {
       for (count of [10, 100]) {
-        cost_factor = (Math.pow(1.15,count) - 1) / (1.15 - 1);
-        total_cost = bestBuy.price * cost_factor;
+        total_cost = CM.Strategy.costToPurchase(count, bestBuy.price)
         if (total_cost < 5*CM.Strategy.trueCpS &&
             CM.Cache.lastCookies >= total_cost)
           bulk_amount = count;
