@@ -261,6 +261,17 @@ CM.Strategy.getCheapItem = function(item, price) {
   return pp;
 }
 
+CM.Strategy.itemLimitsForMinigames = function(item, price) {
+  // FIXME: It's probably some factor times trueCpS, not simply 1*trueCpS
+  if (item === "Cursor" && Game.hasGod("ruin") &&
+      Game.Objects.Mine.amount >= 5 && price > 1*CM.Strategy.trueCpS)
+    return Number.MAX_VALUE;
+  else if (item === "Wizard tower" && Game.Objects["Wizard tower"].minigame &&
+           Game.Objects.Portal.amount >= 5)
+    return Number.MAX_VALUE;
+  return 0;
+}
+
 CM.Strategy.determineBestBuy = function(metric) {
   // First purchase is always a Cursor.  Also, when we haven't yet bought
   // anything, pp for all upgrades is NaN or Infinity, so we really do
@@ -288,6 +299,7 @@ CM.Strategy.determineBestBuy = function(metric) {
   for (item in CM.Cache.Objects) {
     price = Game.Objects[item].getPrice();
     pp = metric(item, price);
+    pp = Math.max(pp, CM.Strategy.itemLimitsForMinigames(item, price));
     if (pp < lowestPP) {
       lowestPP = pp;
       best = {name: item, price: price, pp: pp, obj: Game.Objects[item]}
