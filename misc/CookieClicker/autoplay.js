@@ -10,7 +10,7 @@
 //     are just right (including buying AND selling buildings)
 //
 // The mediocre reaction time has a few downsides, which I intend to not fix:
-//   * It always fails to complete chains from golden cookies
+//   * It often fails to complete chains from golden cookies
 //   * During a cookie storm it only gets at most one cookie per second,
 //     and misses all of them the first couple seconds.  Most humans get
 //     far more.
@@ -230,7 +230,10 @@ CM.Strategy.popOne = function() {
       if (shimmer.type !== 'golden' || shimmer.wrath === 0) {
         shimmer.pop();
         CM.Strategy.timer.lastPop = Date.now();
-        setTimeout(CM.Strategy.shimmerAct, CM.Strategy.Interval(1000, 2000));
+        var [minw, maxw] = [1000, 2000];
+        if (Game.shimmerTypes.golden.last === 'chain cookie')
+          [minw, maxw] = [4500, 5750];
+        setTimeout(CM.Strategy.shimmerAct, CM.Strategy.Interval(minw, maxw));
         if (CM.Strategy.logHandOfFateCookie) {
           CM.Strategy.logHandOfFateCookie = false;
           console.log(`Hand of Fate resulted in ` +
