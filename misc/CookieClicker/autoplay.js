@@ -1,3 +1,44 @@
+// autoplay.js: An extension to make Cookie Clicker more like IdleRPG
+//
+// This extension models a human-like player with below average reaction
+// time and speed.  It basically does just a few things:
+//   * Makes purchases (max of 1 purchase per five seconds)
+//   * Clicks on golden cookies and reindeer (after human-like delay)
+//   * Clicks on the big cookie during ClickFrenzies/DragonFlights
+//     (5 or so times per second, after human like delay)
+//   * Occasionally takes advantage of Pantheon/Grimoire if conditions
+//     are just right (including buying AND selling buildings)
+//
+// The mediocre reaction time has a few downsides, which I intend to not fix:
+//   * It always fails to complete chains from golden cookies
+//   * During a cookie storm it only gets at most one cookie per second,
+//     and misses all of them the first couple seconds.  Most humans get
+//     far more.
+//
+// There are also many things this extension doesn't do:
+//   * Anything related to the Grandmapocalypse (e.g. won't pop wrinklers)
+//   * It won't ascend to heaven, or purchase heavenly upgrades for you
+//   * It won't purchase various upgrades:
+//     * Anything that starts, advances, pauses, or ends the grandmapocalypse
+//     * The chocolate egg at easter (better saved until you want to ascend)
+//   * It won't toggle switches (mostly from heavenly upgrades):
+//     * The season switching biscuits
+//     * The milk selector
+//     * The background selector
+//     * The golden switch
+//   * It won't interact with Krumblor (the dragon)
+//   * It won't select spirits for the Pantheon minigame
+//   * It won't cast most the spells from the Grimoire minigame
+//   * It only collects achievements for things related to normal operations
+//     (buying buildings, clicking on golden cookies, maybe an occasional
+//      spell); special achievements (renaming the bakery, dunking the big
+//      cookie, etc.) are for a real human to collect
+//
+// The long list of things it doesn't do means that there are a few things
+// left for a human player to do, it just gives them stuff to do far fewer
+// times a day and removes the motivation to check on the game and do work
+// very often.  Just the way I like it.
+
 CM.Strategy = {};
 CM.Strategy.oldPlaySound = CM.Disp.PlaySound;
 CM.Strategy.oldRemakePP = CM.Cache.RemakePP;
