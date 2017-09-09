@@ -172,8 +172,10 @@ CM.Strategy.shimmerAct = function() {
 
   // After a golden cookie is clicked, check to see if it was one that
   // needs lots of clicking on the big cookie
-  if (!CM.Strategy.clickInterval && CM.Strategy.clickingNeeded())
+  if (!CM.Strategy.clickInterval && CM.Strategy.clickingNeeded()) {
+    console.log("Click frenzy or dragonflight detected, about to click a lot");
     CM.Strategy.clickInterval = setInterval(CM.Strategy.doClicking, 100);
+  }
 
   // Otherwise, check to see if we want to take advantage of some spell
   // casting
