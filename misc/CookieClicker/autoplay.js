@@ -378,12 +378,14 @@ CM.Strategy.handlePurchases = function() {
     return;
 
   // Find out what to purchase
+  log_purchase_for_user = true;
   bestBuy = CM.Strategy.determineBestBuy(CM.Strategy.getTruePP);
   bestBuffer = CM.Strategy.determineBankBuffer(bestBuy.pp);
 
   // If we don't have enough to buy the best item, check for super cheap items
   if (CM.Cache.lastCookies < bestBuffer + bestBuy.price) {
     bestBuy = CM.Strategy.determineBestBuy(CM.Strategy.getCheapItem);
+    log_purchase_for_user = false;
     // bestBuy could be {} here
     if (bestBuy.name)
       bestBuffer = 0;
@@ -404,9 +406,10 @@ CM.Strategy.handlePurchases = function() {
     }
 
     // Log what we're doing
-    console.log(`Bought ${bulk_amount} ${bestBuy.name}(s) `+
-                `(with PP of ${CM.Disp.Beautify(bestBuy.pp)}) ` +
-                `at ${Date().toString()}`)
+    if (log_purchase_for_user)
+      console.log(`Bought ${bulk_amount} ${bestBuy.name}(s) `+
+                  `(with PP of ${CM.Disp.Beautify(bestBuy.pp)}) ` +
+                  `at ${Date().toString()}`)
 
     // Make sure we buy bulk_amount
     var orig = [Game.buyMode, Game.buyBulk];
