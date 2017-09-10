@@ -50,7 +50,6 @@ CM.Strategy.spiritOfRuinDelayBeforeBuying = false;
 CM.Strategy.logHandOfFateCookie = false;
 CM.Strategy.clickInterval = undefined;
 CM.Strategy.currentBuff = 1;
-CM.Strategy.prevBuff = 0;
 CM.Strategy.upgradesToIgnore = [
     "Golden switch [off]",
     "Golden switch [on]",
