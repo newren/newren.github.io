@@ -52,6 +52,8 @@ CM.Strategy.spiritOfRuinDelayBeforeBuying = false;
 CM.Strategy.logHandOfFateCookie = false;
 CM.Strategy.clickInterval = undefined;
 CM.Strategy.currentBuff = 1;
+CM.Strategy.currentNumBuffs = 0;
+CM.Strategy.currentBuffTimeLeft = 0;
 CM.Strategy.upgradesToIgnore = [
     "Golden switch [off]",
     "Golden switch [on]",
@@ -500,11 +502,22 @@ CM.Disp.PlaySound = function(url) {
 CM.Cache.RemakePP = function() {
   CM.Strategy.oldRemakePP()
 
-  // Determine currentBuff and trueCpS, not temporary CpS going on now
-  mult = 1;
+  // Determine various information about the current buffs going on:
+  // their combined multiplier, how many there are, and how long they'll
+  // continue running for
+  CM.Strategy.currentBuff = 1;
+  CM.Strategy.currentNumBuffs = 0;
+  CM.Strategy.currentBuffTimeLeft = 0;
+  maxDur = Number.MAX_VALUE;
   Object.keys(Game.buffs).forEach(name => {
-    if (Game.buffs[name].multCpS) mult *= Game.buffs[name].multCpS});
-  CM.Strategy.currentBuff = mult;
+    if (Game.buffs[name].multCpS) {
+      CM.Strategy.currentBuff *= Game.buffs[name].multCpS;
+      maxDur = Math.min(maxDur, Game.buffs[name].time/Game.fps);
+      CM.Strategy.currentNumBuffs += 1;
+    }});
+  CM.Strategy.currentBuffTimeLeft = maxDur;
+
+  // Determine the trueCpS (i.e. cookies/second), not temporary CpS going on now
   CM.Strategy.trueCpS = Game.cookiesPs / CM.Strategy.currentBuff;
 
   // Do purchases
