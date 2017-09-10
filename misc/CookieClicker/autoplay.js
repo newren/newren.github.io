@@ -146,7 +146,7 @@ CM.Strategy.spiritOfRuinActions = function() {
       return action_taken;
 
     } else if (Game.Objects.Cursor.amount &&
-               Game.buffs["Click frenzy"].time/Game.fps > 5) {
+               Game.buffs["Click frenzy"].time/Game.fps > 3) {
       // Sell cursors!
       Game.Objects.Cursor.sell(-1);
       Game.Objects.Cursor.refresh();
