@@ -45,6 +45,8 @@ CM.Strategy.oldRemakePP = CM.Cache.RemakePP;
 CM.Strategy.timer = {};
 CM.Strategy.timer.lastPop = Date.now();
 CM.Strategy.timer.lastPurchaseCheck = Date.now();
+CM.Strategy.lastResets = Game.resets - 1;
+CM.Strategy.buildingMax = {};
 CM.Strategy.spiritOfRuinDelayTokens = 0;
 CM.Strategy.spiritOfRuinDelayBeforeBuying = false;
 CM.Strategy.logHandOfFateCookie = false;
@@ -435,6 +437,21 @@ CM.Strategy.handlePurchases = function() {
     if (bestBuy.name)
       bestBuffer = 0;
   }
+
+  // Don't log the purchase for the user if we're just buying back what we
+  // already had before
+  if (Game.resets > CM.Strategy.lastResets) {
+    CM.Strategy.lastResets = Game.resets
+    for (bldg in Game.Objects)
+      CM.Strategy.buildingMax[bldg] = Game.Objects[bldg].amount;
+  } else if (Game.Objects[bestBuy.name] &&
+             CM.Strategy.buildingMax[bestBuy.name] >
+             Game.Objects[bestBuy.name].amount) {
+    log_purchase_for_user = false;
+  }
+  for (bldg in Game.Objects)
+    CM.Strategy.buildingMax[bldg] = Math.max(
+      CM.Strategy.buildingMax[bldg], Game.Objects[bldg].amount);
 
   // Purchase if we have enough
   if (bestBuy.price && CM.Cache.lastCookies >= bestBuffer + bestBuy.price) {
