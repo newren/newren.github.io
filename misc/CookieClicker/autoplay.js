@@ -426,7 +426,8 @@ CM.Strategy.determineBankBuffer = function(item_pp) {
 
   // Do golden cookies overlap?  Is the Grimoire minigame in play?
   gc_overlap = Game.Upgrades["Get lucky"].bought
-  grimoire = Game.Objects["Wizard tower"].minigame
+  grimoire = Game.Objects["Wizard tower"].minigame &&
+             Game.Objects["Wizard tower"].amount >= 21; // # needed to cast HofF
 
   // What's our reasonable minimum production before the next Golden Cookie
   // appears?
