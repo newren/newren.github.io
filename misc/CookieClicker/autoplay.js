@@ -52,8 +52,10 @@ CM.Strategy.spiritOfRuinDelayBeforeBuying = false;
 CM.Strategy.logHandOfFateCookie = false;
 CM.Strategy.clickInterval = undefined;
 CM.Strategy.currentBuff = 1;
-CM.Strategy.currentNumBuffs = 0;
+CM.Strategy.currentNumBuffs = 0; // Normal only, not click buffs
 CM.Strategy.currentBuffTimeLeft = 0;
+CM.Strategy.currentClickBuff = 1;
+CM.Strategy.currentClickBuffTimeLeft = 0;
 CM.Strategy.upgradesToIgnore = [
     "Golden switch [off]",
     "Golden switch [on]",
@@ -100,9 +102,7 @@ CM.Strategy.Interval = function(lower, upper) {
 }
 
 CM.Strategy.clickingNeeded = function() {
-  if (Object.keys(Game.buffs).length === 0)
-    return false;
-  return !!Game.buffs["Click frenzy"] || !!Game.buffs["Dragonflight"];
+  return CM.Strategy.currentClickBuff > 1;
 }
 
 CM.Strategy.costToPurchase = function(count, base_price) {
@@ -158,7 +158,7 @@ CM.Strategy.spiritOfRuinActions = function() {
       return action_taken;
 
     } else if (Game.Objects.Cursor.amount &&
-               Game.buffs["Click frenzy"].time/Game.fps > 3) {
+               CM.Strategy.currentClickBuffTimeLeft > 3) {
       // Sell cursors!
       Game.Objects.Cursor.sell(-1);
       Game.Objects.Cursor.refresh();
@@ -226,7 +226,7 @@ CM.Strategy.shimmerAct = function() {
   // After a golden cookie is clicked, check to see if it was one that
   // needs lots of clicking on the big cookie
   if (!CM.Strategy.clickInterval && CM.Strategy.clickingNeeded()) {
-    console.log(`Click frenzy or dragonflight detected at ${Date().toString()}`);
+    console.log(`Mouse click multiplier buff detected at ${Date().toString()}`);
     CM.Strategy.clickInterval = setInterval(CM.Strategy.doClicking, 100);
   }
 
@@ -551,16 +551,25 @@ CM.Cache.RemakePP = function() {
   // their combined multiplier, how many there are, and how long they'll
   // continue running for
   CM.Strategy.currentBuff = 1;
-  CM.Strategy.currentNumBuffs = 0;
+  CM.Strategy.currentNumBuffs = 0; // Normal only, not click buffs
   CM.Strategy.currentBuffTimeLeft = 0;
+  CM.Strategy.currentClickBuff = 1;
+  CM.Strategy.currentClickBuffTimeLeft = 0;
   maxDur = Number.MAX_VALUE;
+  minClickDur = 0;
   Object.keys(Game.buffs).forEach(name => {
     if (Game.buffs[name].multCpS) {
       CM.Strategy.currentBuff *= Game.buffs[name].multCpS;
       maxDur = Math.min(maxDur, Game.buffs[name].time/Game.fps);
       CM.Strategy.currentNumBuffs += 1;
-    }});
+    }
+    if (Game.buffs[name].multClick && name !== 'Devastation') {
+      CM.Strategy.currentClickBuff *= Game.buffs[name].multClick;
+      minClickDur = Math.max(minClickDur, Game.buffs[name].time/Game.fps);
+    }
+  });
   CM.Strategy.currentBuffTimeLeft = maxDur;
+  CM.Strategy.currentClickBuffTimeLeft = minClickDur;
 
   // Determine the trueCpS (i.e. cookies/second), not temporary CpS going on now
   CM.Strategy.trueCpS = Game.cookiesPs / CM.Strategy.currentBuff;
