@@ -321,7 +321,7 @@ CM.Strategy.getCheapItem = function(item, price) {
 
 CM.Strategy.itemLimitsForMinigames = function(item, price) {
   // FIXME: It's probably some factor times trueCpS, not simply 1*trueCpS
-  if (item === "Cursor" && Game.hasGod("ruin") &&
+  if (item === "Cursor" && Game.hasGod && Game.hasGod("ruin") &&
       Game.Objects.Mine.amount >= 5 && price > 1*CM.Strategy.trueCpS)
     return Number.MAX_VALUE;
   else if (item === "Wizard tower" && Game.Objects["Wizard tower"].minigame &&
