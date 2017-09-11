@@ -85,6 +85,15 @@ CM.Strategy.specialPPfactor =
     "Nevercrack mouse" :  0.01,
     "Armythril mouse" :   0.01,
   }
+// Assumes Dragon Harvest aura is active.  *shrug*
+CM.Strategy.expected_factors = {
+  "Frenzy"                :{ "Frenzy":  2.82, "Lucky":  1.95, "Other":  2.26 },
+  "Lucky"                 :{ "Frenzy":  1.95, "Lucky":  2.82, "Other":  2.26 },
+  "Frenzy+Lucky"          :{ "Frenzy":  3.70, "Lucky":  5.65, "Other":  5.96 },
+  "Frenzy+DHBS"           :{ "Frenzy": 10.58, "Lucky": 12.53, "Other": 12.84 },
+  "Frenzy+BuildingSpecial":{ "Frenzy": 20.41, "Lucky": 22.37, "Other": 22.69 },
+  "Frenzy+DragonHarvest"  :{ "Frenzy": 27.16, "Lucky": 29.11, "Other": 29.42 },
+}
 
 CM.Strategy.Interval = function(lower, upper) {
   return lower + (upper-lower)*Math.random();
@@ -357,63 +366,99 @@ CM.Strategy.determineBestBuy = function(metric) {
   return best
 }
 
-CM.Strategy.luckyExpectations = function() {
+CM.Strategy.expectedTimeUntil = function(gcevent) {
   // Get information about how often cookies appear
   mint = Game.shimmerTypes.golden.minTime/Game.fps;
   maxt = Game.shimmerTypes.golden.maxTime/Game.fps;
   used = Game.shimmerTypes.golden.time/Game.fps;
 
-  // Determine how often they appear on average, rough estimate
+  // Rough estimate of how often they appear on average
   ave = 0.75*mint + 0.25*maxt;
 
-  // Set the factors and determine the last type that appeared
-  factors = {Frenzy: {full: 2.06, prob: 0.620},
-             Lucky:  {full: 2.81, prob: 0.124},
-             Other:  {full: 2.50, prob: 0.400}}
-  map = {'frenzy': 'Frenzy', 'multiply cookies': 'Lucky'}
-  lastType = map[Game.shimmerTypes.golden.last] || "Other"
+  // Determine the last type that appeared
+  map = {'frenzy': 'Frenzy', 'multiply cookies': 'Lucky'};
+  lastType = map[Game.shimmerTypes.golden.last] || 'Other';
 
-  // Compute the expected time
-  expected = ave * factors[lastType].full - used * factors[lastType].prob;
+  // Expected time
+  return ave * CM.Strategy.expected_factors[gcevent][lastType] -
+         Math.min(used, ave);
+}
 
-  // Even if probabilistically it's better to wait for "Lucky" golden cookie,
-  // it's more fun to buy stuff early on, so set a fudge factor.  Besides,
-  // sometimes the purchases have compounding effects.  For example,
-  // purchasing farmer grandmas make farms more effective (already factored
-  // into the PP of "farmer grandmas"), but will ALSO make future grandma
-  // and farm purchases have a lower PP after the purchase.  We may well want
-  // to buy those "more effective" grandmas and farms, but CookieMonster
-  // won't display them to us until we have bought the upgrade.  So, err on
-  // the side of purchasing.
-  fudge_factor = (Math.PI+Math.E)/3;
-  expected_lucky_time = fudge_factor * expected;
-
+CM.Strategy.reasonableCookiesBeforeGC = function() {
   // Also compute how much we are almost certain we can earn before we
   // get a golden cookie
+  maxt = Game.shimmerTypes.golden.maxTime/Game.fps;
+  used = Game.shimmerTypes.golden.time/Game.fps;
   min_reasonable_time_until_gc = Math.min(0, (5.0/12*maxt)-used);
-  cookies_before_gc = min_reasonable_time_until_gc * CM.Strategy.trueCpS;
 
-  return [expected_lucky_time, cookies_before_gc];
+  normal_cookies = min_reasonable_time_until_gc * CM.Strategy.trueCpS;
+  buffed_cookies = CM.Strategy.currentBuff *
+    Math.min(min_reasonable_time_until_gc, CM.Strategy.currentBuffTimeLeft);
+  cookies_before_gc = Math.max(normal_cookies, buffed_cookies);
+
+  return cookies_before_gc;
+}
+
+CM.Strategy.timeUntilMagicFill = function(desired_level) {
+  grimoire = Game.Objects["Wizard tower"].minigame
+
+  // A human being only knows the floor of our actual magic.  So act like
+  // that's all we know
+  cur_magic = Math.floor(grimoire.magic);
+  max_magic = grimoire.magicM;
+
+  // If we already have enough, wait time is zero.
+  if (grimoire.magic >= desired_level)
+    return 0;
+
+  // Solution to continuous integral approximation of the actual discrete
+  // integral formula used to calculate magic does a really good job of
+  // pegging exactly how much time we need -- well, assuming that "cur_magic"
+  // is actually close, that is.
+  return 100.0 / 3 * Math.sqrt(Math.max(100,max_magic)) *
+         (Math.sqrt(max_magic) - Math.sqrt(cur_magic));
 }
 
 CM.Strategy.determineBankBuffer = function(item_pp) {
-  var [expected_time, cookies_before_gc] = CM.Strategy.luckyExpectations();
-  if (Game.cookiesPs === 0 || item_pp < expected_time)
+  // Special case getting started
+  if (Game.cookiesPs === 0)
     return 0;
-  // FIXME: Extend the bank buffer if spells can be cast
-  if (Game.Upgrades["Get lucky"].bought) {
-    if (Game.Objects["Wizard tower"].minigame &&
-        Game.Objects["Wizard tower"].minigame.magicM >= 20)
-      // Frenzy + (DragonHarvest | BuildingSpecial) + Conjure Baked Goods:
-      //   Conjure Baked Goods is basically 2x lucky (if buffer of cookies in
-      //   bank is enough), so if we assume BuildingSpecial == DragonHarvest
-      //   (== 15), then we need 2*15*LuckyFrenzy.
-      return 15*CM.Cache.LuckyFrenzy - cookies_before_gc;
-    else
-      return CM.Cache.LuckyFrenzy - cookies_before_gc;
-  }
-  else
+
+  // Do golden cookies overlap?  Is the Grimoire minigame in play?
+  gc_overlap = Game.Upgrades["Get lucky"].bought
+  grimoire = Game.Objects["Wizard tower"].minigame
+
+  // What's our reasonable minimum production before the next Golden Cookie
+  // appears?
+  var cookies_before_gc = CM.Strategy.reasonableCookiesBeforeGC();
+  var expected_time;
+
+  // Make sure we have enough bank buffer to take optimal advantage of
+  // "Lucky" golden cookies, including relevant multipliers.
+  if (!gc_overlap) {
+    if (grimoire) {
+      expected_time = CM.Strategy.timeUntilMagicFill(23) +
+                      CM.Strategy.expectedTimeUntil("Frenzy");
+      if (item_pp > expected_time)
+        return CM.Cache.LuckyFrenzy - cookies_before_gc;
+    }
+    fudge_factor = (Math.PI+Math.E)/3; // I like fudge
+    expected_time = CM.Strategy.expectedTimeUntil("Lucky");
+    if (item_pp < fudge_factor * expected_time)
+      return 0
     return CM.Cache.Lucky - cookies_before_gc;
+  } else {
+    if (grimoire) {
+      expected_time = CM.Strategy.timeUntilMagicFill(23) +
+                      CM.Strategy.expectedTimeUntil("Frenzy+DHBS");
+      if (item_pp > expected_time)
+        return 15*CM.Cache.LuckyFrenzy - cookies_before_gc;
+    }
+    expected_time = CM.Strategy.expectedTimeUntil("Frenzy+Lucky");
+    if (item_pp < expected_time)
+      return CM.Cache.Lucky - cookies_before_gc;
+    return CM.Cache.LuckyFrenzy - cookies_before_gc;
+  }
 }
 
 CM.Strategy.handlePurchases = function() {
