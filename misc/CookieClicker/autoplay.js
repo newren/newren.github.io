@@ -433,6 +433,7 @@ CM.Strategy.determineBankBuffer = function(item_pp) {
   // appears?
   var cookies_before_gc = CM.Strategy.reasonableCookiesBeforeGC();
   var expected_time;
+  var factor = 23/3;
 
   // Make sure we have enough bank buffer to take optimal advantage of
   // "Lucky" golden cookies, including relevant multipliers.
@@ -440,23 +441,22 @@ CM.Strategy.determineBankBuffer = function(item_pp) {
     if (grimoire) {
       expected_time = CM.Strategy.timeUntilMagicFill(23) +
                       CM.Strategy.expectedTimeUntil("Frenzy");
-      if (item_pp > expected_time)
+      if (item_pp > factor*expected_time)
         return CM.Cache.LuckyFrenzy - cookies_before_gc;
     }
-    fudge_factor = (Math.PI+Math.E)/3; // I like fudge
     expected_time = CM.Strategy.expectedTimeUntil("Lucky");
-    if (item_pp < fudge_factor * expected_time)
+    if (item_pp < factor*expected_time)
       return 0
     return CM.Cache.Lucky - cookies_before_gc;
   } else {
     if (grimoire) {
       expected_time = CM.Strategy.timeUntilMagicFill(23) +
                       CM.Strategy.expectedTimeUntil("Frenzy+DHBS");
-      if (item_pp > expected_time)
+      if (item_pp > factor*expected_time)
         return 15*CM.Cache.LuckyFrenzy - cookies_before_gc;
     }
     expected_time = CM.Strategy.expectedTimeUntil("Frenzy+Lucky");
-    if (item_pp < expected_time)
+    if (item_pp < factor*expected_time)
       return CM.Cache.Lucky - cookies_before_gc;
     return CM.Cache.LuckyFrenzy - cookies_before_gc;
   }
