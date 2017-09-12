@@ -73,19 +73,19 @@ CM.Strategy.upgradesToIgnore = [
     "Bunny biscuit",
     "Chocolate egg"]
 CM.Strategy.specialPPfactor =
-  { "Lucky day":          0.7,
-    "Serendipity":        1.4,
-    "Get lucky":          7.0,
-    "Plastic mouse" :     0.01,
-    "Iron mouse" :        0.01,
-    "Titanium mouse" :    0.01,
-    "Adamantium mouse" :  0.01,
-    "Unobtainium mouse" : 0.01,
-    "Eludium mouse" :     0.01,
-    "Wishalloy mouse" :   0.01,
-    "Fantasteel mouse" :  0.01,
-    "Nevercrack mouse" :  0.01,
-    "Armythril mouse" :   0.01,
+  { "Lucky day":          1.4,
+    "Serendipity":        2.9,
+    "Get lucky":          8.3,
+    "Plastic mouse" :     0.04,
+    "Iron mouse" :        0.04,
+    "Titanium mouse" :    0.09,
+    "Adamantium mouse" :  0.09,
+    "Unobtainium mouse" : 0.09,
+    "Eludium mouse" :     0.71,
+    "Wishalloy mouse" :   0.71,
+    "Fantasteel mouse" :  0.71,
+    "Nevercrack mouse" :  0.71,
+    "Armythril mouse" :   0.71,
   }
 // Assumes Dragon Harvest aura is active.  *shrug*
 CM.Strategy.expected_factors = {
@@ -282,7 +282,7 @@ CM.Strategy.getTruePP = function(item, price) {
     // CookieMonster simply returns Infinity for.
     special_factor = CM.Strategy.specialPPfactor[item]
     if (special_factor) {
-      pp = Game.Upgrades[item].getPrice() / special_factor / cps;
+      pp = Game.Upgrades[item].getPrice() / (special_factor * cps);
     } else {
       pp = CM.Cache.Upgrades[item].pp * CM.Strategy.currentBuff;
     }
