@@ -34,10 +34,10 @@
 //      spell); special achievements (renaming the bakery, dunking the big
 //      cookie, etc.) are for a real human to collect
 //
-// The long list of things it doesn't do means that there are a few things
-// left for a human player to do, it just gives them stuff to do far fewer
-// times a day and removes the motivation to check on the game and do work
-// very often.  Just the way I like it.
+// Most of the things it doesn't do are things you probably would only want to
+// do rather infrequently, thus this extension mostly removes the motivation
+// to frequently check on the game and makes it more of an infrequent check-up
+// and tweaking.  Just the way I like it.
 
 CM.Strategy = {};
 CM.Strategy.oldPlaySound = CM.Disp.PlaySound;
