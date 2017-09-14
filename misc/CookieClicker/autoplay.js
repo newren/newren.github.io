@@ -292,8 +292,11 @@ CM.Strategy.getTruePP = function(item, price) {
       pp = CM.Cache.Upgrades[item].pp * CM.Strategy.currentBuff;
     }
   } else if (CM.Cache.Objects[item]) {
-    pp = CM.Cache.Objects[item].pp * CM.Strategy.currentBuff;
-  }
+    bsf = CM.Strategy.building_special_factor;
+    bs_pp = Math.max(0, Game.Objects[item].getPrice()-Game.cookies) / cps +
+            Game.Objects[item].getPrice() / (bsf * cps)
+    pp = Math.min(CM.Cache.Objects[item].pp * CM.Strategy.currentBuff, bs_pp);
+}
 
   // Return what we found
   return pp;
@@ -302,23 +305,13 @@ CM.Strategy.getTruePP = function(item, price) {
 CM.Strategy.getCheapItem = function(item, price) {
   // pp == Projected Payoff, mostly calculated by CookieMonster.  We're not
   // actually calculating PP here, just returning a random small value if an
-  // item is considered cheap enough.
+  // item is considered cheap enough.  Basically, I don't want upgrades to
+  // sit around forever, and once buildings become cheap enough it's cool
+  // to just buy more.
   pp = Number.MAX_VALUE;
   cps = CM.Strategy.trueCpS;
-  if (CM.Cache.Upgrades[item]) {
-    // I don't want upgrades to sit around forever unbought, so put some
-    // some minimum pp for all upgrades; besides, it's possible we need one
-    // upgrade to unlock others.
-    if (price < 1*cps)
-      return 3.1415926535897932384626433832795; // arbitrary small number
-  } else if (CM.Cache.Objects[item]) {
-    // Building not only have the potential to unlock upgrades, they also
-    // have value due to "building special" golden cookies so consider them
-    // cheap up to a bit higher limits than upgrades.
-    f = Math.min(5, 0.5*Math.log10(cps))
-    if (price < f*cps)
-      return 3.1415926535897932384626433832795; // arbitrary small number
-  }
+  if (price < 1*cps)
+    return 3.1415926535897932384626433832795; // arbitrary small number
 
   // Return what we found
   return pp;
@@ -478,6 +471,12 @@ CM.Strategy.handlePurchases = function() {
   if (CM.Strategy.clickInterval)
     return;
 
+  // Set a small factor to help with building purchase decisions
+  CM.Strategy.building_special_factor = 0.000058;
+  if (Game.Has('Lucky day')) CM.Strategy.building_special_factor = 0.00011;
+  if (Game.Has('Serendipity')) CM.Strategy.building_special_factor = 0.00021;
+  if (Game.Has('Get lucky')) CM.Strategy.building_special_factor = 0.0009;
+
   // Find out what to purchase
   log_purchase_for_user = true;
   bestBuy = CM.Strategy.determineBestBuy(CM.Strategy.getTruePP);
@@ -486,7 +485,6 @@ CM.Strategy.handlePurchases = function() {
   // If we don't have enough to buy the best item, check for super cheap items
   if (CM.Cache.lastCookies < bestBuffer + bestBuy.price) {
     bestBuy = CM.Strategy.determineBestBuy(CM.Strategy.getCheapItem);
-    log_purchase_for_user = false;
     // bestBuy could be {} here
     if (bestBuy.name)
       bestBuffer = 0;
