@@ -537,21 +537,7 @@ CM.Strategy.handlePurchases = function() {
   }
 }
 
-//
-// Monkey patching to hook into the relevant parts of CookieMonster follow
-//
-
-CM.Disp.PlaySound = function(url) {
-  // CM.Disp.PlaySound is called unconditionally, but then checks the options
-  // to determine whether to actually play the sound, so even if the sound
-  // option is off, we can use this to auto-click golden cookies.  :-)
-  CM.Strategy.ShimmerAppeared();
-  CM.Strategy.oldPlaySound(url);
-}
-
-CM.Cache.RemakePP = function() {
-  CM.Strategy.oldRemakePP()
-
+CM.Strategy.recomputeBuffs = function() {
   // Determine various information about the current buffs going on:
   // their combined multiplier, how many there are, and how long they'll
   // continue running for
@@ -578,7 +564,23 @@ CM.Cache.RemakePP = function() {
 
   // Determine the trueCpS (i.e. cookies/second), not temporary CpS going on now
   CM.Strategy.trueCpS = Game.cookiesPs / CM.Strategy.currentBuff;
+}
 
-  // Do purchases
+//
+// Monkey patching to hook into the relevant parts of CookieMonster follow
+//
+
+CM.Disp.PlaySound = function(url) {
+  // CM.Disp.PlaySound is called unconditionally, but then checks the options
+  // to determine whether to actually play the sound, so even if the sound
+  // option is off, we can use this to auto-click golden cookies.  :-)
+  CM.Strategy.ShimmerAppeared();
+  CM.Strategy.oldPlaySound(url);
+}
+
+CM.Cache.RemakePP = function() {
+  CM.Strategy.oldRemakePP();
+
+  CM.Strategy.recomputeBuffs();
   CM.Strategy.handlePurchases();
 }
