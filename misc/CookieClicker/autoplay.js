@@ -568,7 +568,7 @@ CM.Cache.RemakePP = function() {
     if (Game.buffs[name].multCpS) {
       CM.Strategy.currentBuff *= Game.buffs[name].multCpS;
       maxDur = Math.min(maxDur, Game.buffs[name].time/Game.fps);
-      CM.Strategy.currentNumBuffs += 1;
+      CM.Strategy.currentNumBuffs += (Game.buffs[name].multCpS > 1) ? 1 : -1;
     }
     if (Game.buffs[name].multClick && name !== 'Devastation') {
       CM.Strategy.currentClickBuff *= Game.buffs[name].multClick;
