@@ -178,6 +178,11 @@ CM.Strategy.spiritOfRuinActions = function() {
 }
 
 CM.Strategy.doClicking = function() {
+  // Recompute the buffs as we use that info in some of our sub-functions
+  // (mostly just to see if there's still a clicking buff or whether there's
+  // enough time left in it to do more spiritOfRuinActions)
+  CM.Strategy.recomputeBuffs();
+
   // Check if we can boost our click power by buying and selling buildings
   if (CM.Strategy.spiritOfRuinActions()) {
     // Buying and selling buildings and simultaneously clicking on the big
