@@ -87,15 +87,20 @@ CM.Strategy.specialPPfactor =
     "Nevercrack mouse" :  0.71,
     "Armythril mouse" :   0.71,
   }
-// Assumes Dragon Harvest aura is active.  *shrug*
-CM.Strategy.expected_factors = {
-  "Frenzy"                :{ "Frenzy":  2.82, "Lucky":  1.95, "Other":  2.26 },
-  "Lucky"                 :{ "Frenzy":  1.95, "Lucky":  2.82, "Other":  2.26 },
-  "Frenzy+Lucky"          :{ "Frenzy":  3.70, "Lucky":  5.65, "Other":  5.96 },
-  "Frenzy+DHBS"           :{ "Frenzy": 10.58, "Lucky": 12.53, "Other": 12.84 },
-  "Frenzy+BuildingSpecial":{ "Frenzy": 20.41, "Lucky": 22.37, "Other": 22.69 },
-  "Frenzy+DragonHarvest"  :{ "Frenzy": 27.16, "Lucky": 29.11, "Other": 29.42 },
+// Assumes Dragon Harvest aura is active.  Stacked power-ups are cool.
+CM.Strategy.expected_factors = {  // Monte Carlo FTW
+  Frenzy       : { Frenzy:  2.82, Lucky:  1.95, Other:  2.26, Overall:  2.36 },
+  Lucky        : { Frenzy:  1.95, Lucky:  2.82, Other:  2.26, Overall:  2.36 },
+  DHBS         : { Frenzy:  4.18, Lucky:  4.18, Other:  4.48, Overall:  4.25 },
+  BS           : { Frenzy:  7.59, Lucky:  7.58, Other:  7.89, Overall:  7.66 },
+  DH           : { Frenzy:  9.90, Lucky:  9.90, Other: 10.21, Overall:  9.97 },
+  ClickFrenzy  : { Frenzy: 19.27, Lucky: 19.26, Other: 19.57, Overall: 19.34 },
+  FrenzyXLucky : { Frenzy:  3.70, Lucky:  5.65, Other:  5.96, Overall:  4.97 },
+  FrenzyXDHoBS : { Frenzy: 10.58, Lucky: 12.53, Other: 12.84, Overall: 11.85 },
+  FrenzyXBS    : { Frenzy: 20.43, Lucky: 22.37, Other: 22.68, Overall: 21.70 },
+  FrenzyXDH    : { Frenzy: 27.15, Lucky: 29.10, Other: 29.43, Overall: 28.43 }
 }
+
 
 CM.Strategy.Interval = function(lower, upper) {
   return lower + (upper-lower)*Math.random();
@@ -451,11 +456,11 @@ CM.Strategy.determineBankBuffer = function(item_pp) {
   } else {
     if (grimoire) {
       expected_time = CM.Strategy.timeUntilMagicFill(23) +
-                      CM.Strategy.expectedTimeUntil("Frenzy+DHBS");
+                      CM.Strategy.expectedTimeUntil("FrenzyXDHoBS");
       if (item_pp > factor*expected_time)
         return 15*CM.Cache.LuckyFrenzy - cookies_before_gc;
     }
-    expected_time = CM.Strategy.expectedTimeUntil("Frenzy+Lucky");
+    expected_time = CM.Strategy.expectedTimeUntil("FrenzyXLucky");
     if (item_pp < factor*expected_time)
       return CM.Cache.Lucky - cookies_before_gc;
     return CM.Cache.LuckyFrenzy - cookies_before_gc;
