@@ -463,7 +463,8 @@ CM.Strategy.determineBankBuffer = function(item_pp) {
 }
 
 CM.Strategy.handlePurchases = function() {
-  // Don't run this function too often
+  // Don't run this function too often, even if stats are updated more
+  // frequently (see CM.Config.UpStats and CM.ConfigData.UpStats)
   if (Date.now() - CM.Strategy.timer.lastPurchaseCheck < 5000)
     return;
   CM.Strategy.timer.lastPurchaseCheck = Date.now();
