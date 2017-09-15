@@ -207,7 +207,32 @@ CM.Strategy.doClicking = function() {
   }
 }
 
-CM.Strategy.cbg_better_than_fhof = function() {
+CM.Strategy.cbg_better_than_fhof = function(just_determining_bank_buffer) {
+  if (just_determining_bank_buffer) {
+    // buff_time will be min'ed with 26 or 13, we don't want to limit further
+    // than that, so just pick something arbitrarily large.
+    buff_time = Number.MAX_VALUE;
+
+    // We may not have a sufficient bank of cookies now, but if having a
+    // sufficient bank of cookies would lead to ability to cast more effective
+    // spells then we want to make sure to set the bank buffer large enough.
+    // So, see what is the better spell if we assume sufficiently many banked
+    // cookies.
+    ratio_of_desired_buffer = 1;
+  } else { // actively trying to cast a spell
+    buff_time = CM.Strategy.currentBuffTimeLeft;
+    buff_mult = CM.Strategy.currentBuff;
+
+    // If we were to cast conjure baked goods, what percentage of the optimal
+    // number of cookies could we hope to get?
+    desired_bank_buffer = 30 * 60 * CM.Strategy.trueCpS * buff_mult / 0.15;
+    ratio_of_desired_buffer = Math.min(1, Game.cookies / desired_bank_buffer);
+  }
+
+  // Can't cast HofF if we don't have enough magic
+  grimoire = Game.Objects["Wizard tower"].minigame;
+  if (grimoire.magicM < 21) // Hopefully magicM >= 8 so we can cast cbg
+    return true;
   has_ruin = (Game.hasGod && Game.hasGod("ruin"))
 
   // Which is better: conjuring baked goods or forcing the hand of fate?
@@ -228,8 +253,7 @@ CM.Strategy.cbg_better_than_fhof = function() {
   // and another 1.5 seconds to see what the result is and whether action
   // needs to be taken, for a total of five seconds off of whatever overlapped
   // buff time we have.
-  duration = Math.min(CM.Strategy.currentBuffTimeLeft,
-                      Game.Has("Get lucky") ? 26 : 13) - 5;
+  duration = Math.min(buff_time, Game.Has("Get lucky") ? 26 : 13) - 5;
 
   // Also, if we're using the spirit of ruin, 2 out of every 10 seconds used on
   // buying and selling buildings.  And we won't sell if there won't be enough
@@ -247,13 +271,8 @@ CM.Strategy.cbg_better_than_fhof = function() {
     duration = ruin_duration;
   }
 
-  // If we were to cast conjure baked goods, what percentage of the optimal
-  // number of cookies could we hope to get?
-  desired_bank_buffer = 30 * 60 * CM.Strategy.trueCpS * CM.Strategy.currentBuff / 0.15;
-  desired_bank_buffer_ratio = Math.max(1, Game.cookies / desired_bank_buffer);
-
   // Let our caller know if conjure baked goods is better than hand of fate.
-  return 1.83 * desired_bank_buffer_ratio > ruin_mult * cursor_mult * duration;
+  return 1.83 * ratio_of_desired_buffer > ruin_mult * cursor_mult * duration;
 }
 
 CM.Strategy.conjureBakedGoods = function() {
@@ -282,7 +301,7 @@ CM.Strategy.handleSpellsDuringBuffs = function() {
   if (Game.buffs["Magic inept"])
     return;
 
-  if (CM.Strategy.cbg_better_than_fhof()) {
+  if (CM.Strategy.cbg_better_than_fhof(0)) {
     //if ((grimoire.magic >= 8 && selling) || (grimoire.magic >= 13)) {
     // FIXME: Add strategy to use when selling wizard towers; it could be
     // even faster.
@@ -502,6 +521,8 @@ CM.Strategy.timeUntilMagicFill = function(desired_level) {
   // that's all we know
   cur_magic = Math.floor(grimoire.magic);
   max_magic = grimoire.magicM;
+  if (!desired_level)
+    desired_level = grimoire.magicM;
 
   // If we already have enough, wait time is zero.
   if (grimoire.magic >= desired_level)
@@ -523,7 +544,7 @@ CM.Strategy.determineBankBuffer = function(item_pp) {
   // Do golden cookies overlap?  Is the Grimoire minigame in play?
   gc_overlap = Game.Upgrades["Get lucky"].bought
   grimoire = Game.Objects["Wizard tower"].minigame &&
-             Game.Objects["Wizard tower"].amount >= 21; // # needed to cast HofF
+             Game.Objects["Wizard tower"].amount >= 8; // # needed for CBG
 
   // What's our reasonable minimum production before the next Golden Cookie
   // appears?
@@ -535,10 +556,14 @@ CM.Strategy.determineBankBuffer = function(item_pp) {
   // "Lucky" golden cookies, including relevant multipliers.
   if (!gc_overlap) {
     if (grimoire) {
-      expected_time = CM.Strategy.timeUntilMagicFill(23) +
+      expected_time = CM.Strategy.timeUntilMagicFill() +
                       CM.Strategy.expectedTimeUntil("Frenzy");
-      if (item_pp > factor*expected_time)
-        return CM.Cache.LuckyFrenzy - cookies_before_gc;
+      if (item_pp > factor*expected_time) {
+        if (CM.Strategy.cbg_better_than_fhof(1))
+          return 2*CM.Cache.LuckyFrenzy - cookies_before_gc;
+        else
+          return CM.Cache.LuckyFrenzy - cookies_before_gc;
+      }
     }
     expected_time = CM.Strategy.expectedTimeUntil("Lucky");
     if (item_pp > factor*expected_time)
@@ -546,10 +571,14 @@ CM.Strategy.determineBankBuffer = function(item_pp) {
     return 0
   } else {
     if (grimoire) {
-      expected_time = CM.Strategy.timeUntilMagicFill(23) +
+      expected_time = CM.Strategy.timeUntilMagicFill() +
                       CM.Strategy.expectedTimeUntil("FrenzyXDHoBS");
-      if (item_pp > factor*expected_time)
-        return 15*CM.Cache.LuckyFrenzy - cookies_before_gc;
+      if (item_pp > factor*expected_time) {
+        if (CM.Strategy.cbg_better_than_fhof(1))
+          return 30*CM.Cache.LuckyFrenzy - cookies_before_gc;
+        else
+          return 15*CM.Cache.LuckyFrenzy - cookies_before_gc;
+      }
     }
     if (item_pp > factor * CM.Strategy.expectedTimeUntil("FrenzyXLucky"))
       return CM.Cache.LuckyFrenzy - cookies_before_gc;
