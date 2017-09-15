@@ -207,22 +207,115 @@ CM.Strategy.doClicking = function() {
   }
 }
 
-CM.Strategy.hand_of_fate_if_good_time = function() {
-  // Every building special is named something different in Game.buffs; we
-  // have to look at Game.buffs[whatever].type.name instead and compare to
-  // "building buff"
-  building_special = Object.entries(Game.buffs).some(([key,buff]) =>
-                                    {return buff.type.name == "building buff"})
+CM.Strategy.cbg_better_than_fhof = function() {
+  has_ruin = (Game.hasGod && Game.hasGod("ruin"))
+
+  // Which is better: conjuring baked goods or forcing the hand of fate?
+  ruin_mult = 1;
+  if (has_ruin) {
+    slot = has_ruin; // Game.hasGod returns which slot if it's in one
+    ruin_factor = .01 * Math.pow(2, 1-slot);
+    ruin_mult += ruin_factor * Game.Objects.Cursor.amount;
+  }
+
+  // Figure out cursor multiplier; could just add up number of "<X> mouse"
+  // upgrades and multiply by .01, but this is easier.
+  cursor_mult = Game.mouseCps()/Game.cookiesPs;
+
+  // How much time will we have during a potential click frenzy?  If we cast
+  // Force hand of Fate, it'll take about 3.5 seconds to find golden cookie
+  // and pop it (remember: pretending to have human-like reaction time),
+  // and another 1.5 seconds to see what the result is and whether action
+  // needs to be taken, for a total of five seconds off of whatever overlapped
+  // buff time we have.
+  duration = Math.min(CM.Strategy.currentBuffTimeLeft,
+                      Game.Has("Get lucky") ? 26 : 13) - 5;
+
+  // Also, if we're using the spirit of ruin, 2 out of every 10 seconds used on
+  // buying and selling buildings.  And we won't sell if there won't be enough
+  // time left to make it worth it.
+  if (has_ruin) {
+    ruin_duration = 0;
+    while (duration) {
+      duration -= 2;
+      if (duration <= 3)
+        duration = 0;
+      remainder = Math.min(8, duration);
+      duration -= remainder;
+      ruin_duration += remainder;
+    }
+    duration = ruin_duration;
+  }
+
+  // If we were to cast conjure baked goods, what percentage of the optimal
+  // number of cookies could we hope to get?
+  desired_bank_buffer = 30 * 60 * CM.Strategy.trueCpS * CM.Strategy.currentBuff / 0.15;
+  desired_bank_buffer_ratio = Math.max(1, Game.cookies / desired_bank_buffer);
+
+  // Let our caller know if conjure baked goods is better than hand of fate.
+  return 1.83 * desired_bank_buffer_ratio > ruin_mult * cursor_mult * duration;
+}
+
+CM.Strategy.conjureBakedGoods = function() {
+  cbg = Game.Objects["Wizard tower"].minigame.spells["conjure baked goods"];
+  Game.Objects["Wizard tower"].minigame.castSpell(cbg);
+}
+
+CM.Strategy.handleSpellsDuringBuffs = function() {
+  // Exit early if we can't cast spells
   grimoire = Game.Objects["Wizard tower"].minigame
-  // If our magic is at least half way between needed to cast HandOfFate and
-  // full, and we have Frenzy plus either DragonHarvest or BuildingSpecial
-  if (grimoire.magic > 5 + 0.8 * grimoire.magicM &&
-      Game.buffs["Frenzy"] &&
-      (Game.buffs["Dragon Harvest"] || building_special)) {
-    // Cast the hand of fate, and trigger a timeout to act on it
-    grimoire.castSpell(grimoire.spells["hand of fate"])
-    CM.Strategy.logHandOfFateCookie = true;
-    setTimeout(CM.Strategy.shimmerAct, CM.Strategy.Interval(3000, 4000))
+  if (!grimoire)
+    return;
+
+  // Recompute the buffs (after popping GC) as we use that info here.
+  CM.Strategy.recomputeBuffs();
+
+  // Exit early if there aren't any buffs, if there aren't enough buffs to be
+  // worth our while, if the buffs will end to soon, or if our odds of getting
+  // a successful spell cast are too low.
+  if (CM.Strategy.currentNumBuffs < 1)
+    return;
+  if (Game.Has("Get lucky") && CM.Strategy.currentNumBuffs < 2)
+    return;
+  if (CM.Strategy.currentBuffTimeLeft < Math.PI+2*Math.E) // *shrug*
+    return;
+  if (Game.buffs["Magic inept"])
+    return;
+
+  if (CM.Strategy.cbg_better_than_fhof()) {
+    //if ((grimoire.magic >= 8 && selling) || (grimoire.magic >= 13)) {
+    // FIXME: Add strategy to use when selling wizard towers; it could be
+    // even faster.
+    if (grimoire.magic >= 14 ||
+        (grimoire.magic >= 13 && CM.Strategy.currentBuffTimeLeft >= 72)) {
+      // First, cast diminish ineptitude.  Well, unless there's already a
+      // leftover diminish ineptitude from before.
+      time_left = CM.Strategy.currentBuffTimeLeft;
+      if (!Game.buffs["Magic adept"]) {
+        grimoire.castSpell(grimoire.spells["diminish ineptitude"])
+      } else {
+        time_left = Math.min(time_left, Game.buffs["Magic adept"].time/Game.fps);
+      }
+
+      // Next, setup a timeout to cast Conjure Baked Goods
+      if (Game.buffs["Magic adept"]) {
+        maxWait = 1000*(time_left-5);
+        minWait = 1000*Math.max(.5, time_left-10);
+        if (grimoire.magic < 14)
+          minWait = 66000;
+        setTimeout(CM.Strategy.conjureBakedGoods,
+                   CM.Strategy.Interval(minWait, maxWait))
+      } else {
+        console.log(`Diminish ineptitude failed; not trying to CBG at ${Date().toString()}`);
+      }
+    }
+  } else {
+    if (grimoire.magic >= 23) {
+      // Cast the hand of fate, and trigger a timeout to act on it
+      grimoire.castSpell(grimoire.spells["hand of fate"])
+      CM.Strategy.logHandOfFateCookie = true;
+      setTimeout(CM.Strategy.shimmerAct, CM.Strategy.Interval(3000, 4000))
+    }
   }
 }
 
@@ -242,8 +335,8 @@ CM.Strategy.shimmerAct = function() {
 
   // Otherwise, check to see if we want to take advantage of some spell
   // casting
-  else if (Game.Objects["Wizard tower"].minigame)
-    CM.Strategy.hand_of_fate_if_good_time()
+  else
+    CM.Strategy.handleSpellsDuringBuffs();
 }
 
 CM.Strategy.popOne = function() {
