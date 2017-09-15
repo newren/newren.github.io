@@ -448,9 +448,9 @@ CM.Strategy.determineBankBuffer = function(item_pp) {
         return CM.Cache.LuckyFrenzy - cookies_before_gc;
     }
     expected_time = CM.Strategy.expectedTimeUntil("Lucky");
-    if (item_pp < factor*expected_time)
-      return 0
-    return CM.Cache.Lucky - cookies_before_gc;
+    if (item_pp > factor*expected_time)
+      return CM.Cache.Lucky - cookies_before_gc;
+    return 0
   } else {
     if (grimoire) {
       expected_time = CM.Strategy.timeUntilMagicFill(23) +
@@ -458,10 +458,11 @@ CM.Strategy.determineBankBuffer = function(item_pp) {
       if (item_pp > factor*expected_time)
         return 15*CM.Cache.LuckyFrenzy - cookies_before_gc;
     }
-    expected_time = CM.Strategy.expectedTimeUntil("FrenzyXLucky");
-    if (item_pp < factor*expected_time)
+    if (item_pp > factor * CM.Strategy.expectedTimeUntil("FrenzyXLucky"))
+      return CM.Cache.LuckyFrenzy - cookies_before_gc;
+    if (item_pp > factor * CM.Strategy.expectedTimeUntil("Lucky"))
       return CM.Cache.Lucky - cookies_before_gc;
-    return CM.Cache.LuckyFrenzy - cookies_before_gc;
+    return 0;
   }
 }
 
