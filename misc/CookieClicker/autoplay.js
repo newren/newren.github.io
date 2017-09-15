@@ -629,9 +629,6 @@ CM.Strategy.handlePurchases = function() {
              Game.Objects[bestBuy.name].amount) {
     log_purchase_for_user = false;
   }
-  for (bldg in Game.Objects)
-    CM.Strategy.buildingMax[bldg] = Math.max(
-      CM.Strategy.buildingMax[bldg], Game.Objects[bldg].amount);
 
   // Purchase if we have enough
   if (bestBuy.price && CM.Cache.lastCookies >= bestBuffer + bestBuy.price) {
@@ -663,6 +660,12 @@ CM.Strategy.handlePurchases = function() {
     // restore values we temporarily over-wrote
     [Game.buyMode, Game.buyBulk] = orig;
   }
+
+  // Record the new maximum number of buildings (which could have changed due
+  // to the user buying since we last ran or by our purchasing above)
+  for (bldg in Game.Objects)
+    CM.Strategy.buildingMax[bldg] = Math.max(
+      CM.Strategy.buildingMax[bldg], Game.Objects[bldg].amount);
 }
 
 CM.Strategy.recomputeBuffs = function() {
