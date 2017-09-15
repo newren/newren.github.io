@@ -49,6 +49,7 @@ CM.Strategy.lastResets = Game.resets - 1;
 CM.Strategy.buildingMax = {};
 CM.Strategy.spiritOfRuinDelayTokens = 0;
 CM.Strategy.spiritOfRuinDelayBeforeBuying = false;
+CM.Strategy.spiritOfRuinPreviousCursors = 0;
 CM.Strategy.logHandOfFateCookie = false;
 CM.Strategy.clickInterval = undefined;
 CM.Strategy.currentBuff = 1;
@@ -120,9 +121,11 @@ CM.Strategy.spiritOfRuinActions = function() {
 
   // If the buff ends for needing to click, don't bother taking any further
   // action.
-  if (!CM.Strategy.clickingNeeded()) {
+  if (!CM.Strategy.clickingNeeded() &&
+      Game.Objects.Cursor.amount >= CM.Strategy.spiritOfRuinPreviousCursors) {
     CM.Strategy.spiritOfRuinDelayTokens = 0;
     CM.Strategy.spiritOfRuinDelayBeforeBuying = false;
+    CM.Strategy.spiritOfRuinPreviousCursors = 0;
     return !action_taken;
   }
 
@@ -133,6 +136,23 @@ CM.Strategy.spiritOfRuinActions = function() {
     // Technically we didn't take an action, but we pretend we did because
     // we don't want clicking on the big cookie to happen during our
     // "delay before next action"
+    return action_taken;
+  }
+
+  // If clicking is over, buy back whatever cursors we had
+  if (!CM.Strategy.clickingNeeded()) {
+    // Determine how many to buy at a time
+    num = CM.Strategy.spiritOfRuinPreviousCursors - Game.Objects.Cursor.amount;
+    num = (num >= 100) ? 100 : ((num >= 10) ? 10 : 1);
+
+    // Buy them
+    [oldMode, Game.buyMode] = [Game.buyMode, 1];
+    Game.Objects.Cursor.buy(num);
+    Game.buyMode = oldMode;
+    Game.Objects.Cursor.refresh();
+
+    // Add a slight delay before buying more
+    CM.Strategy.spiritOfRuinDelayTokens = CM.Strategy.Interval(1, 3);
     return action_taken;
   }
 
@@ -165,6 +185,8 @@ CM.Strategy.spiritOfRuinActions = function() {
     } else if (Game.Objects.Cursor.amount &&
                CM.Strategy.currentClickBuffTimeLeft > 3) {
       // Sell cursors!
+      if (CM.Strategy.spiritOfRuinPreviousCursors == 0)
+        CM.Strategy.spiritOfRuinPreviousCursors = Game.Objects.Cursor.amount;
       Game.Objects.Cursor.sell(-1);
       Game.Objects.Cursor.refresh();
       CM.Strategy.spiritOfRuinDelayTokens = CM.Strategy.Interval(4, 6);
