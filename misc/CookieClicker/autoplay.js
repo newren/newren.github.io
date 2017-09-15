@@ -298,6 +298,13 @@ CM.Strategy.cbg_better_than_fhof = function(just_determining_bank_buffer) {
 }
 
 CM.Strategy.conjureBakedGoods = function() {
+  desired_bank_buffer = 30 * 60 * Game.cookiesPs / 0.15;
+  percentage_of_wanted = Math.min(100, 100 * Game.cookies / desired_bank_buffer);
+
+  console.log(`Cast Conjure Baked Goods ` +
+              `during x${CM.Strategy.currentBuff} buff ` +
+              `with ${percentage_of_wanted.toFixed(0)}% of bank ` +
+              `at ${Date().toString()}`)
   cbg = Game.Objects["Wizard tower"].minigame.spells["conjure baked goods"];
   Game.Objects["Wizard tower"].minigame.castSpell(cbg);
 }
@@ -393,8 +400,9 @@ CM.Strategy.popOne = function() {
         if (CM.Strategy.logHandOfFateCookie) {
           CM.Strategy.logHandOfFateCookie = false;
           console.log(`Hand of Fate resulted in ` +
-                      `${Game.shimmerTypes.golden.last} ` +
-                      `golden cookie at ${Date().toString()}`)
+                      `${Game.shimmerTypes.golden.last} golden cookie ` +
+                      `during x${CM.Strategy.currentBuff} buff ` +
+                      `at ${Date().toString()}`)
         }
         return true;
       }
