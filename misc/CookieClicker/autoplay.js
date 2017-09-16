@@ -554,16 +554,24 @@ CM.Strategy.timeUntilMagicFill = function(desired_level) {
   if (!desired_level)
     desired_level = grimoire.magicM;
 
+  // Never cast spells if Diminish Ineptitude backfired and the backfire is
+  // still active.
+  inept_time = 0;
+  if (Game.buffs["Magic inept"])
+    inept_time = Game.buffs["Magic inept"].time/Game.fps;
+
   // If we already have enough, wait time is zero.
   if (grimoire.magic >= desired_level)
-    return 0;
+    return inept_time;
 
   // Solution to continuous integral approximation of the actual discrete
   // integral formula used to calculate magic does a really good job of
   // pegging exactly how much time we need -- well, assuming that "cur_magic"
   // is actually close, that is.
-  return 100.0 / 3 * Math.sqrt(Math.max(100,max_magic)) *
-         (Math.sqrt(max_magic) - Math.sqrt(cur_magic));
+  fill_time = 100.0 / 3 * Math.sqrt(Math.max(100,max_magic)) *
+              (Math.sqrt(max_magic) - Math.sqrt(cur_magic));
+
+  return Math.max(inept_time, fill_time);
 }
 
 CM.Strategy.determineBankBuffer = function(item_pp) {
