@@ -39,25 +39,25 @@
 // to frequently check on the game and makes it more of an infrequent check-up
 // and tweaking.  Just the way I like it.
 
-CM.Strategy = {};
-CM.Strategy.oldPlaySound = CM.Disp.PlaySound;
-CM.Strategy.oldRemakePP = CM.Cache.RemakePP;
-CM.Strategy.timer = {};
-CM.Strategy.timer.lastPop = Date.now();
-CM.Strategy.timer.lastPurchaseCheck = Date.now();
-CM.Strategy.lastResets = Game.resets - 1;
-CM.Strategy.buildingMax = {};
-CM.Strategy.spiritOfRuinDelayTokens = 0;
-CM.Strategy.spiritOfRuinDelayBeforeBuying = false;
-CM.Strategy.spiritOfRuinPreviousCursors = 0;
-CM.Strategy.logHandOfFateCookie = false;
-CM.Strategy.clickInterval = undefined;
-CM.Strategy.currentBuff = 1;
-CM.Strategy.currentNumBuffs = 0; // Normal only, not click buffs
-CM.Strategy.currentBuffTimeLeft = 0;
-CM.Strategy.currentClickBuff = 1;
-CM.Strategy.currentClickBuffTimeLeft = 0;
-CM.Strategy.upgradesToIgnore = [
+AP = {};
+AP.oldPlaySound = CM.Disp.PlaySound;
+AP.oldRemakePP = CM.Cache.RemakePP;
+AP.timer = {};
+AP.timer.lastPop = Date.now();
+AP.timer.lastPurchaseCheck = Date.now();
+AP.lastResets = Game.resets - 1;
+AP.buildingMax = {};
+AP.spiritOfRuinDelayTokens = 0;
+AP.spiritOfRuinDelayBeforeBuying = false;
+AP.spiritOfRuinPreviousCursors = 0;
+AP.logHandOfFateCookie = false;
+AP.clickInterval = undefined;
+AP.currentBuff = 1;
+AP.currentNumBuffs = 0; // Normal only, not click buffs
+AP.currentBuffTimeLeft = 0;
+AP.currentClickBuff = 1;
+AP.currentClickBuffTimeLeft = 0;
+AP.upgradesToIgnore = [
     "Golden switch [off]",
     "Golden switch [on]",
     "Background selector",
@@ -73,7 +73,7 @@ CM.Strategy.upgradesToIgnore = [
     "Fool's biscuit",
     "Bunny biscuit",
     "Chocolate egg"]
-CM.Strategy.specialPPfactor =
+AP.specialPPfactor =
   { "Lucky day":          1.4,
     "Serendipity":        2.9,
     "Get lucky":          8.3,
@@ -89,7 +89,7 @@ CM.Strategy.specialPPfactor =
     "Armythril mouse" :   0.71,
   }
 // Assumes Dragon Harvest aura is active.  Stacked power-ups are cool.
-CM.Strategy.expected_factors = {  // Monte Carlo FTW
+AP.expected_factors = {  // Monte Carlo FTW
   Frenzy       : { Frenzy:  2.82, Lucky:  1.95, Other:  2.26, Overall:  2.36 },
   Lucky        : { Frenzy:  1.95, Lucky:  2.82, Other:  2.26, Overall:  2.36 },
   DHBS         : { Frenzy:  4.18, Lucky:  4.18, Other:  4.48, Overall:  4.25 },
@@ -102,37 +102,36 @@ CM.Strategy.expected_factors = {  // Monte Carlo FTW
   FrenzyXDH    : { Frenzy: 27.15, Lucky: 29.10, Other: 29.43, Overall: 28.43 }
 }
 
-
-CM.Strategy.Interval = function(lower, upper) {
+AP.Interval = function(lower, upper) {
   return lower + (upper-lower)*Math.random();
 }
 
-CM.Strategy.clickingNeeded = function() {
-  return CM.Strategy.currentClickBuff > 1;
+AP.clickingNeeded = function() {
+  return AP.currentClickBuff > 1;
 }
 
-CM.Strategy.costToPurchase = function(count, base_price) {
+AP.costToPurchase = function(count, base_price) {
   cost_factor = (Math.pow(1.15,count) - 1) / (1.15 - 1);
   return cost_factor * base_price;
 }
 
-CM.Strategy.spiritOfRuinActions = function() {
+AP.spiritOfRuinActions = function() {
   action_taken = true;
 
   // If the buff ends for needing to click, don't bother taking any further
   // action.
-  if (!CM.Strategy.clickingNeeded() &&
-      Game.Objects.Cursor.amount >= CM.Strategy.spiritOfRuinPreviousCursors) {
-    CM.Strategy.spiritOfRuinDelayTokens = 0;
-    CM.Strategy.spiritOfRuinDelayBeforeBuying = false;
-    CM.Strategy.spiritOfRuinPreviousCursors = 0;
+  if (!AP.clickingNeeded() &&
+      Game.Objects.Cursor.amount >= AP.spiritOfRuinPreviousCursors) {
+    AP.spiritOfRuinDelayTokens = 0;
+    AP.spiritOfRuinDelayBeforeBuying = false;
+    AP.spiritOfRuinPreviousCursors = 0;
     return !action_taken;
   }
 
   // Whenever we previously took an action, we need to delay a bit before
   // taking another, to mimic how a real human would behave.
-  if (CM.Strategy.spiritOfRuinDelayTokens > 0) {
-    CM.Strategy.spiritOfRuinDelayTokens -= 1;
+  if (AP.spiritOfRuinDelayTokens > 0) {
+    AP.spiritOfRuinDelayTokens -= 1;
     // Technically we didn't take an action, but we pretend we did because
     // we don't want clicking on the big cookie to happen during our
     // "delay before next action"
@@ -140,9 +139,9 @@ CM.Strategy.spiritOfRuinActions = function() {
   }
 
   // If clicking is over, buy back whatever cursors we had
-  if (!CM.Strategy.clickingNeeded()) {
+  if (!AP.clickingNeeded()) {
     // Determine how many to buy at a time
-    num = CM.Strategy.spiritOfRuinPreviousCursors - Game.Objects.Cursor.amount;
+    num = AP.spiritOfRuinPreviousCursors - Game.Objects.Cursor.amount;
     num = (num >= 100) ? 100 : ((num >= 10) ? 10 : 1);
 
     // Buy them
@@ -152,7 +151,7 @@ CM.Strategy.spiritOfRuinActions = function() {
     Game.Objects.Cursor.refresh();
 
     // Add a slight delay before buying more
-    CM.Strategy.spiritOfRuinDelayTokens = CM.Strategy.Interval(1, 3);
+    AP.spiritOfRuinDelayTokens = AP.Interval(1, 3);
     return action_taken;
   }
 
@@ -163,14 +162,14 @@ CM.Strategy.spiritOfRuinActions = function() {
 
     // Determine if we need to buy more cursors
     base_cursor_cost = Game.Objects.Cursor.getPrice();
-    cursor_cost = CM.Strategy.costToPurchase(100, base_cursor_cost);
-    if (cursor_cost < CM.Strategy.trueCpS) {
+    cursor_cost = AP.costToPurchase(100, base_cursor_cost);
+    if (cursor_cost < AP.trueCpS) {
 
       // We should not buy immediately after a Devastation buff ends; there
       // should be some kind of natural delay.
-      if (CM.Strategy.spiritOfRuinDelayBeforeBuying) {
-        CM.Strategy.spiritOfRuinDelayBeforeBuying = false;
-        CM.Strategy.spiritOfRuinDelayTokens = CM.Strategy.Interval(5, 7);
+      if (AP.spiritOfRuinDelayBeforeBuying) {
+        AP.spiritOfRuinDelayBeforeBuying = false;
+        AP.spiritOfRuinDelayTokens = AP.Interval(5, 7);
         return action_taken;
       }
 
@@ -179,18 +178,18 @@ CM.Strategy.spiritOfRuinActions = function() {
       Game.Objects.Cursor.buy(100);
       Game.buyMode = oldMode;
       Game.Objects.Cursor.refresh();
-      CM.Strategy.spiritOfRuinDelayTokens = CM.Strategy.Interval(1, 3);
+      AP.spiritOfRuinDelayTokens = AP.Interval(1, 3);
       return action_taken;
 
     } else if (Game.Objects.Cursor.amount &&
-               CM.Strategy.currentClickBuffTimeLeft > 3) {
+               AP.currentClickBuffTimeLeft > 3) {
       // Sell cursors!
-      if (CM.Strategy.spiritOfRuinPreviousCursors == 0)
-        CM.Strategy.spiritOfRuinPreviousCursors = Game.Objects.Cursor.amount;
+      if (AP.spiritOfRuinPreviousCursors == 0)
+        AP.spiritOfRuinPreviousCursors = Game.Objects.Cursor.amount;
       Game.Objects.Cursor.sell(-1);
       Game.Objects.Cursor.refresh();
-      CM.Strategy.spiritOfRuinDelayTokens = CM.Strategy.Interval(4, 6);
-      CM.Strategy.spiritOfRuinDelayBeforeBuying = true;
+      AP.spiritOfRuinDelayTokens = AP.Interval(4, 6);
+      AP.spiritOfRuinDelayBeforeBuying = true;
       return action_taken;
     }
   }
@@ -199,14 +198,14 @@ CM.Strategy.spiritOfRuinActions = function() {
   return !action_taken;
 }
 
-CM.Strategy.doClicking = function() {
+AP.doClicking = function() {
   // Recompute the buffs as we use that info in some of our sub-functions
   // (mostly just to see if there's still a clicking buff or whether there's
   // enough time left in it to do more spiritOfRuinActions)
-  CM.Strategy.recomputeBuffs();
+  AP.recomputeBuffs();
 
   // Check if we can boost our click power by buying and selling buildings
-  if (CM.Strategy.spiritOfRuinActions()) {
+  if (AP.spiritOfRuinActions()) {
     // Buying and selling buildings and simultaneously clicking on the big
     // cookie isn't something a human would be able to do, so just return
     // early.
@@ -219,17 +218,17 @@ CM.Strategy.doClicking = function() {
     Game.mouseX = Game.cookieOriginX+5;
     Game.mouseY = Game.cookieOriginY+5;
     Game.ClickCookie();
-    if (!CM.Strategy.clickingNeeded()) {
-      clearInterval(CM.Strategy.clickInterval);
-      CM.Strategy.clickInterval = undefined;
+    if (!AP.clickingNeeded()) {
+      clearInterval(AP.clickInterval);
+      AP.clickInterval = undefined;
       // Make there be a good gap between a clicking frenzy and any purchase
       // automatically made afterward.
-      CM.Strategy.timer.lastPurchaseCheck = Date.now() + 5000;
+      AP.timer.lastPurchaseCheck = Date.now() + 5000;
     }
   }
 }
 
-CM.Strategy.cbg_better_than_fhof = function(just_determining_bank_buffer) {
+AP.cbg_better_than_fhof = function(just_determining_bank_buffer) {
   if (just_determining_bank_buffer) {
     // buff_time will be min'ed with 26 or 13, we don't want to limit further
     // than that, so just pick something arbitrarily large.
@@ -242,12 +241,12 @@ CM.Strategy.cbg_better_than_fhof = function(just_determining_bank_buffer) {
     // cookies.
     ratio_of_desired_buffer = 1;
   } else { // actively trying to cast a spell
-    buff_time = CM.Strategy.currentBuffTimeLeft;
-    buff_mult = CM.Strategy.currentBuff;
+    buff_time = AP.currentBuffTimeLeft;
+    buff_mult = AP.currentBuff;
 
     // If we were to cast conjure baked goods, what percentage of the optimal
     // number of cookies could we hope to get?
-    desired_bank_buffer = 30 * 60 * CM.Strategy.trueCpS * buff_mult / 0.15;
+    desired_bank_buffer = 30 * 60 * AP.trueCpS * buff_mult / 0.15;
     ratio_of_desired_buffer = Math.min(1, Game.cookies / desired_bank_buffer);
   }
 
@@ -297,47 +296,47 @@ CM.Strategy.cbg_better_than_fhof = function(just_determining_bank_buffer) {
   return 1.83 * ratio_of_desired_buffer > ruin_mult * cursor_mult * duration;
 }
 
-CM.Strategy.conjureBakedGoods = function() {
+AP.conjureBakedGoods = function() {
   desired_bank_buffer = 30 * 60 * Game.cookiesPs / 0.15;
   percentage_of_wanted = Math.min(100, 100 * Game.cookies / desired_bank_buffer);
 
   console.log(`Cast Conjure Baked Goods ` +
-              `during x${CM.Strategy.currentBuff} buff ` +
+              `during x${AP.currentBuff} buff ` +
               `with ${percentage_of_wanted.toFixed(0)}% of bank ` +
               `at ${Date().toString()}`)
   cbg = Game.Objects["Wizard tower"].minigame.spells["conjure baked goods"];
   Game.Objects["Wizard tower"].minigame.castSpell(cbg);
 }
 
-CM.Strategy.handleSpellsDuringBuffs = function() {
+AP.handleSpellsDuringBuffs = function() {
   // Exit early if we can't cast spells
   grimoire = Game.Objects["Wizard tower"].minigame
   if (!grimoire)
     return;
 
   // Recompute the buffs (after popping GC) as we use that info here.
-  CM.Strategy.recomputeBuffs();
+  AP.recomputeBuffs();
 
   // Exit early if there aren't any buffs, if there aren't enough buffs to be
   // worth our while, if the buffs will end to soon, or if our odds of getting
   // a successful spell cast are too low.
-  if (CM.Strategy.currentNumBuffs < 1)
+  if (AP.currentNumBuffs < 1)
     return;
-  if (Game.Has("Get lucky") && CM.Strategy.currentNumBuffs < 2)
+  if (Game.Has("Get lucky") && AP.currentNumBuffs < 2)
     return;
-  if (CM.Strategy.currentBuffTimeLeft < Math.PI+2*Math.E) // *shrug*
+  if (AP.currentBuffTimeLeft < Math.PI+2*Math.E) // *shrug*
     return;
   if (Game.buffs["Magic inept"])
     return;
 
-  if (CM.Strategy.cbg_better_than_fhof(0)) {
+  if (AP.cbg_better_than_fhof(0)) {
     // Do we have enough to cast diminish ineptitude and conjure baked goods?
     // FIXME: Add strategy to use when selling wizard towers; it could be
     //        even faster and should be able to do it with just 8 magic.
     if (grimoire.magicM < 13)
       return;
     if (grimoire.magicM == 13 &&
-        (grimoire.magic != 13 || CM.Strategy.currentBuffTimeLeft < 72))
+        (grimoire.magic != 13 || AP.currentBuffTimeLeft < 72))
       return;
     if (grimoire.magicM >= 14 &&
         grimoire.magic < Math.floor(0.6 * grimoire.magicM) + 7)
@@ -345,7 +344,7 @@ CM.Strategy.handleSpellsDuringBuffs = function() {
 
     // First, cast diminish ineptitude.  Well, unless there's already a
     // leftover diminish ineptitude from before.
-    time_left = CM.Strategy.currentBuffTimeLeft;
+    time_left = AP.currentBuffTimeLeft;
     if (!Game.buffs["Magic adept"]) {
       grimoire.castSpell(grimoire.spells["diminish ineptitude"])
     } else {
@@ -363,8 +362,7 @@ CM.Strategy.handleSpellsDuringBuffs = function() {
     minWait = 1000*Math.max(.5, time_left-10);
     if (grimoire.magic < 14)
       minWait = 66000;
-    setTimeout(CM.Strategy.conjureBakedGoods,
-               CM.Strategy.Interval(minWait, maxWait));
+    setTimeout(AP.conjureBakedGoods, AP.Interval(minWait, maxWait));
 
   } else {
     // Do we have enough to cast hand of fate?
@@ -373,101 +371,100 @@ CM.Strategy.handleSpellsDuringBuffs = function() {
 
     // Cast the hand of fate, and trigger a timeout to act on it
     grimoire.castSpell(grimoire.spells["hand of fate"])
-    CM.Strategy.logHandOfFateCookie = true;
-    setTimeout(CM.Strategy.shimmerAct, CM.Strategy.Interval(3000, 4000))
+    AP.logHandOfFateCookie = true;
+    setTimeout(AP.shimmerAct, AP.Interval(3000, 4000))
   }
 }
 
-CM.Strategy.shimmerAct = function() {
+AP.shimmerAct = function() {
   // shimmerAppeared() won't be called after initiating cookie for cookie
   // chains and cookie Storms, so we need to check if there are more cookies
   // manually here.
   if (Game.shimmers.length)
-    CM.Strategy.popOne();
+    AP.popOne();
 
   // After a golden cookie is clicked, check to see if it was one that
   // needs lots of clicking on the big cookie
-  if (!CM.Strategy.clickInterval && CM.Strategy.clickingNeeded()) {
+  if (!AP.clickInterval && AP.clickingNeeded()) {
     console.log(`Mouse click multiplier buff detected at ${Date().toString()}`);
-    CM.Strategy.clickInterval = setInterval(CM.Strategy.doClicking, 100);
+    AP.clickInterval = setInterval(AP.doClicking, 100);
   }
 
   // Otherwise, check to see if we want to take advantage of some spell
   // casting
   else
-    CM.Strategy.handleSpellsDuringBuffs();
+    AP.handleSpellsDuringBuffs();
 }
 
-CM.Strategy.popOne = function() {
-  if (Date.now() - CM.Strategy.timer.lastPop > 1000) {
+AP.popOne = function() {
+  if (Date.now() - AP.timer.lastPop > 1000) {
     Game.shimmers.some(function(shimmer) {
       if (shimmer.type !== 'golden' || shimmer.wrath === 0) {
         shimmer.pop();
-        CM.Strategy.timer.lastPop = Date.now();
+        AP.timer.lastPop = Date.now();
         var [minw, maxw] = [1000, 2000];
         if (Game.shimmerTypes.golden.last === 'chain cookie')
           [minw, maxw] = [4500, 5750];
-        setTimeout(CM.Strategy.shimmerAct, CM.Strategy.Interval(minw, maxw));
-        if (CM.Strategy.logHandOfFateCookie) {
-          CM.Strategy.logHandOfFateCookie = false;
+        setTimeout(AP.shimmerAct, AP.Interval(minw, maxw));
+        if (AP.logHandOfFateCookie) {
+          AP.logHandOfFateCookie = false;
           console.log(`Hand of Fate resulted in ` +
                       `${Game.shimmerTypes.golden.last} golden cookie ` +
-                      `during x${CM.Strategy.currentBuff} buff ` +
+                      `during x${AP.currentBuff} buff ` +
                       `at ${Date().toString()}`)
         }
         return true;
       }
-      else if (CM.Strategy.logHandOfFateCookie &&
+      else if (AP.logHandOfFateCookie &&
                shimmer.type === 'golden' && shimmer.wrath) {
-        CM.Strategy.logHandOfFateCookie = false;
+        AP.logHandOfFateCookie = false;
         console.log(`Hand of Fate resulted in wrath cookie at ` +
                     `${Date().toString()}`)
       }
     });
   } else if (Game.shimmers.length) {
-    setTimeout(CM.Strategy.popOne,
-               1000 - (Date.now() - CM.Strategy.timer.lastPop))
+    setTimeout(AP.popOne, 1000 - (Date.now() - AP.timer.lastPop))
   }
 }
 
-CM.Strategy.ShimmerAppeared = function() {
+AP.ShimmerAppeared = function() {
   min = 1000 * (1 + Game.shimmers[Game.shimmers.length-1].dur / 12)
   max = min + 4000
-  setTimeout(CM.Strategy.popOne, CM.Strategy.Interval(min, max))
+  setTimeout(AP.popOne, AP.Interval(min, max))
 }
 
-CM.Strategy.getTruePP = function(item, price) {
+AP.getTruePP = function(item, price) {
   // pp == Projected Payoff, mostly calculated by CookieMonster
   pp = Number.MAX_VALUE;
-  cps = CM.Strategy.trueCpS;
+  cps = AP.trueCpS;
   if (CM.Cache.Upgrades[item]) {
     // Do a special computation of projected payoff for particular items that
     // CookieMonster simply returns Infinity for.
-    special_factor = CM.Strategy.specialPPfactor[item]
+    special_factor = AP.specialPPfactor[item]
     if (special_factor) {
       pp = Game.Upgrades[item].getPrice() / (special_factor * cps);
     } else {
-      pp = CM.Cache.Upgrades[item].pp * CM.Strategy.currentBuff;
+      pp = CM.Cache.Upgrades[item].pp * AP.currentBuff;
     }
   } else if (CM.Cache.Objects[item]) {
-    bsf = CM.Strategy.building_special_factor;
+    bsf = AP.building_special_factor;
     bs_pp = Math.max(0, Game.Objects[item].getPrice()-Game.cookies) / cps +
             Game.Objects[item].getPrice() / (bsf * cps)
-    pp = Math.min(CM.Cache.Objects[item].pp * CM.Strategy.currentBuff, bs_pp);
+    pp = Math.min(CM.Cache.Objects[item].pp * AP.currentBuff, bs_pp);
 }
 
   // Return what we found
   return pp;
 }
 
-CM.Strategy.getCheapItem = function(item, price) {
+AP.getCheapItem = function(item, price) {
   // pp == Projected Payoff, mostly calculated by CookieMonster.  We're not
   // actually calculating PP here, just returning a random small value if an
   // item is considered cheap enough.  Basically, I don't want upgrades to
   // sit around forever, and once buildings become cheap enough it's cool
   // to just buy more.
   pp = Number.MAX_VALUE;
-  cps = CM.Strategy.trueCpS;
+  cps = AP.trueCpS;
   if (price < 1*cps)
     return 3.1415926535897932384626433832795; // arbitrary small number
 
@@ -475,10 +472,10 @@ CM.Strategy.getCheapItem = function(item, price) {
   return pp;
 }
 
-CM.Strategy.itemLimitsForMinigames = function(item, price) {
+AP.itemLimitsForMinigames = function(item, price) {
   // FIXME: It's probably some factor times trueCpS, not simply 1*trueCpS
   if (item === "Cursor" && Game.hasGod && Game.hasGod("ruin") &&
-      Game.Objects.Mine.amount >= 5 && price > 1*CM.Strategy.trueCpS)
+      Game.Objects.Mine.amount >= 5 && price > 1*AP.trueCpS)
     return Number.MAX_VALUE;
   else if (item === "Wizard tower" && Game.Objects["Wizard tower"].minigame &&
            Game.Objects.Portal.amount >= 5)
@@ -486,7 +483,7 @@ CM.Strategy.itemLimitsForMinigames = function(item, price) {
   return 0;
 }
 
-CM.Strategy.determineBestBuy = function(metric) {
+AP.determineBestBuy = function(metric) {
   // First purchase is always a Cursor.  Also, when we haven't yet bought
   // anything, pp for all upgrades is NaN or Infinity, so we really do
   // need a special case here.
@@ -500,7 +497,7 @@ CM.Strategy.determineBestBuy = function(metric) {
   best = {};
   for (item in CM.Cache.Upgrades) {
     if (Game.Upgrades[item].unlocked) {
-      if (CM.Strategy.upgradesToIgnore.indexOf(item) === -1) {
+      if (AP.upgradesToIgnore.indexOf(item) === -1) {
         price = Game.Upgrades[item].getPrice();
         pp = metric(item, price);
         if (pp < lowestPP) {
@@ -513,7 +510,7 @@ CM.Strategy.determineBestBuy = function(metric) {
   for (item in CM.Cache.Objects) {
     price = Game.Objects[item].getPrice();
     pp = metric(item, price);
-    pp = Math.max(pp, CM.Strategy.itemLimitsForMinigames(item, price));
+    pp = Math.max(pp, AP.itemLimitsForMinigames(item, price));
     if (pp < lowestPP) {
       lowestPP = pp;
       best = {name: item, price: price, pp: pp, obj: Game.Objects[item]}
@@ -522,7 +519,7 @@ CM.Strategy.determineBestBuy = function(metric) {
   return best
 }
 
-CM.Strategy.expectedTimeUntil = function(gcevent) {
+AP.expectedTimeUntil = function(gcevent) {
   // Get information about how often cookies appear
   mint = Game.shimmerTypes.golden.minTime/Game.fps;
   maxt = Game.shimmerTypes.golden.maxTime/Game.fps;
@@ -536,26 +533,26 @@ CM.Strategy.expectedTimeUntil = function(gcevent) {
   lastType = map[Game.shimmerTypes.golden.last] || 'Other';
 
   // Expected time
-  return ave * CM.Strategy.expected_factors[gcevent][lastType] -
+  return ave * AP.expected_factors[gcevent][lastType] -
          Math.min(used, ave);
 }
 
-CM.Strategy.reasonableCookiesBeforeGC = function() {
+AP.reasonableCookiesBeforeGC = function() {
   // Also compute how much we are almost certain we can earn before we
   // get a golden cookie
   maxt = Game.shimmerTypes.golden.maxTime/Game.fps;
   used = Game.shimmerTypes.golden.time/Game.fps;
   min_reasonable_time_until_gc = Math.min(0, (5.0/12*maxt)-used);
 
-  normal_cookies = min_reasonable_time_until_gc * CM.Strategy.trueCpS;
-  buffed_cookies = CM.Strategy.currentBuff *
-    Math.min(min_reasonable_time_until_gc, CM.Strategy.currentBuffTimeLeft);
+  normal_cookies = min_reasonable_time_until_gc * AP.trueCpS;
+  buffed_cookies = AP.currentBuff *
+    Math.min(min_reasonable_time_until_gc, AP.currentBuffTimeLeft);
   cookies_before_gc = Math.max(normal_cookies, buffed_cookies);
 
   return cookies_before_gc;
 }
 
-CM.Strategy.timeUntilMagicFill = function(desired_level) {
+AP.timeUntilMagicFill = function(desired_level) {
   grimoire = Game.Objects["Wizard tower"].minigame
 
   // A human being only knows the floor of our actual magic.  So act like
@@ -585,7 +582,7 @@ CM.Strategy.timeUntilMagicFill = function(desired_level) {
   return Math.max(inept_time, fill_time);
 }
 
-CM.Strategy.determineBankBuffer = function(item_pp) {
+AP.determineBankBuffer = function(item_pp) {
   // Special case getting started
   if (Game.cookiesPs === 0)
     return 0;
@@ -597,7 +594,7 @@ CM.Strategy.determineBankBuffer = function(item_pp) {
 
   // What's our reasonable minimum production before the next Golden Cookie
   // appears?
-  var cookies_before_gc = CM.Strategy.reasonableCookiesBeforeGC();
+  var cookies_before_gc = AP.reasonableCookiesBeforeGC();
   var expected_time;
   var factor = 23/3;
 
@@ -605,63 +602,62 @@ CM.Strategy.determineBankBuffer = function(item_pp) {
   // "Lucky" golden cookies, including relevant multipliers.
   if (!gc_overlap) {
     if (grimoire) {
-      expected_time = CM.Strategy.timeUntilMagicFill() +
-                      CM.Strategy.expectedTimeUntil("Frenzy");
+      expected_time = AP.timeUntilMagicFill() + AP.expectedTimeUntil("Frenzy");
       if (item_pp > factor*expected_time) {
-        if (CM.Strategy.cbg_better_than_fhof(1))
+        if (AP.cbg_better_than_fhof(1))
           return 2*CM.Cache.LuckyFrenzy - cookies_before_gc;
         else
           return CM.Cache.LuckyFrenzy - cookies_before_gc;
       }
     }
-    expected_time = CM.Strategy.expectedTimeUntil("Lucky");
+    expected_time = AP.expectedTimeUntil("Lucky");
     if (item_pp > factor*expected_time)
       return CM.Cache.Lucky - cookies_before_gc;
     return 0
   } else {
     if (grimoire) {
-      expected_time = CM.Strategy.timeUntilMagicFill() +
-                      CM.Strategy.expectedTimeUntil("FrenzyXDHoBS");
+      expected_time = AP.timeUntilMagicFill() +
+                      AP.expectedTimeUntil("FrenzyXDHoBS");
       if (item_pp > factor*expected_time) {
-        if (CM.Strategy.cbg_better_than_fhof(1))
+        if (AP.cbg_better_than_fhof(1))
           return 30*CM.Cache.LuckyFrenzy - cookies_before_gc;
         else
           return 15*CM.Cache.LuckyFrenzy - cookies_before_gc;
       }
     }
-    if (item_pp > factor * CM.Strategy.expectedTimeUntil("FrenzyXLucky"))
+    if (item_pp > factor * AP.expectedTimeUntil("FrenzyXLucky"))
       return CM.Cache.LuckyFrenzy - cookies_before_gc;
-    if (item_pp > factor * CM.Strategy.expectedTimeUntil("Lucky"))
+    if (item_pp > factor * AP.expectedTimeUntil("Lucky"))
       return CM.Cache.Lucky - cookies_before_gc;
     return 0;
   }
 }
 
-CM.Strategy.handlePurchases = function() {
+AP.handlePurchases = function() {
   // Don't run this function too often, even if stats are updated more
   // frequently (see CM.Config.UpStats and CM.ConfigData.UpStats)
-  if (Date.now() - CM.Strategy.timer.lastPurchaseCheck < 5000)
+  if (Date.now() - AP.timer.lastPurchaseCheck < 5000)
     return;
-  CM.Strategy.timer.lastPurchaseCheck = Date.now();
+  AP.timer.lastPurchaseCheck = Date.now();
 
   // Don't buy upgrades or buildings while in a clickfest
-  if (CM.Strategy.clickInterval)
+  if (AP.clickInterval)
     return;
 
   // Set a small factor to help with building purchase decisions
-  CM.Strategy.building_special_factor = 0.000058;
-  if (Game.Has('Lucky day')) CM.Strategy.building_special_factor = 0.00011;
-  if (Game.Has('Serendipity')) CM.Strategy.building_special_factor = 0.00021;
-  if (Game.Has('Get lucky')) CM.Strategy.building_special_factor = 0.0009;
+  AP.building_special_factor = 0.000058;
+  if (Game.Has('Lucky day')) AP.building_special_factor = 0.00011;
+  if (Game.Has('Serendipity')) AP.building_special_factor = 0.00021;
+  if (Game.Has('Get lucky')) AP.building_special_factor = 0.0009;
 
   // Find out what to purchase
   log_purchase_for_user = true;
-  bestBuy = CM.Strategy.determineBestBuy(CM.Strategy.getTruePP);
-  bestBuffer = CM.Strategy.determineBankBuffer(bestBuy.pp);
+  bestBuy = AP.determineBestBuy(AP.getTruePP);
+  bestBuffer = AP.determineBankBuffer(bestBuy.pp);
 
   // If we don't have enough to buy the best item, check for super cheap items
   if (CM.Cache.lastCookies < bestBuffer + bestBuy.price) {
-    bestBuy = CM.Strategy.determineBestBuy(CM.Strategy.getCheapItem);
+    bestBuy = AP.determineBestBuy(AP.getCheapItem);
     // bestBuy could be {} here
     if (bestBuy.name)
       bestBuffer = 0;
@@ -669,12 +665,12 @@ CM.Strategy.handlePurchases = function() {
 
   // Don't log the purchase for the user if we're just buying back what we
   // already had before
-  if (Game.resets > CM.Strategy.lastResets) {
-    CM.Strategy.lastResets = Game.resets
+  if (Game.resets > AP.lastResets) {
+    AP.lastResets = Game.resets
     for (bldg in Game.Objects)
-      CM.Strategy.buildingMax[bldg] = Game.Objects[bldg].amount;
+      AP.buildingMax[bldg] = Game.Objects[bldg].amount;
   } else if (Game.Objects[bestBuy.name] &&
-             CM.Strategy.buildingMax[bestBuy.name] >
+             AP.buildingMax[bestBuy.name] >
              Game.Objects[bestBuy.name].amount) {
     log_purchase_for_user = false;
   }
@@ -686,9 +682,8 @@ CM.Strategy.handlePurchases = function() {
     bulk_amount = 1;
     if (bestBuy.name in Game.Objects) {
       for (count of [10, 100]) {
-        total_cost = CM.Strategy.costToPurchase(count, bestBuy.price)
-        if (total_cost < 5*CM.Strategy.trueCpS &&
-            CM.Cache.lastCookies >= total_cost)
+        total_cost = AP.costToPurchase(count, bestBuy.price)
+        if (total_cost < 5*AP.trueCpS && CM.Cache.lastCookies >= total_cost)
           bulk_amount = count;
       }
     }
@@ -713,37 +708,37 @@ CM.Strategy.handlePurchases = function() {
   // Record the new maximum number of buildings (which could have changed due
   // to the user buying since we last ran or by our purchasing above)
   for (bldg in Game.Objects)
-    CM.Strategy.buildingMax[bldg] = Math.max(
-      CM.Strategy.buildingMax[bldg], Game.Objects[bldg].amount);
+    AP.buildingMax[bldg] = Math.max(
+      AP.buildingMax[bldg], Game.Objects[bldg].amount);
 }
 
-CM.Strategy.recomputeBuffs = function() {
+AP.recomputeBuffs = function() {
   // Determine various information about the current buffs going on:
   // their combined multiplier, how many there are, and how long they'll
   // continue running for
-  CM.Strategy.currentBuff = 1;
-  CM.Strategy.currentNumBuffs = 0; // Normal only, not click buffs
-  CM.Strategy.currentBuffTimeLeft = 0;
-  CM.Strategy.currentClickBuff = 1;
-  CM.Strategy.currentClickBuffTimeLeft = 0;
+  AP.currentBuff = 1;
+  AP.currentNumBuffs = 0; // Normal only, not click buffs
+  AP.currentBuffTimeLeft = 0;
+  AP.currentClickBuff = 1;
+  AP.currentClickBuffTimeLeft = 0;
   maxDur = Number.MAX_VALUE;
   minClickDur = 0;
   Object.keys(Game.buffs).forEach(name => {
     if (Game.buffs[name].multCpS) {
-      CM.Strategy.currentBuff *= Game.buffs[name].multCpS;
+      AP.currentBuff *= Game.buffs[name].multCpS;
       maxDur = Math.min(maxDur, Game.buffs[name].time/Game.fps);
-      CM.Strategy.currentNumBuffs += (Game.buffs[name].multCpS > 1) ? 1 : -1;
+      AP.currentNumBuffs += (Game.buffs[name].multCpS > 1) ? 1 : -1;
     }
     if (Game.buffs[name].multClick && name !== 'Devastation') {
-      CM.Strategy.currentClickBuff *= Game.buffs[name].multClick;
+      AP.currentClickBuff *= Game.buffs[name].multClick;
       minClickDur = Math.max(minClickDur, Game.buffs[name].time/Game.fps);
     }
   });
-  CM.Strategy.currentBuffTimeLeft = maxDur;
-  CM.Strategy.currentClickBuffTimeLeft = minClickDur;
+  AP.currentBuffTimeLeft = maxDur;
+  AP.currentClickBuffTimeLeft = minClickDur;
 
   // Determine the trueCpS (i.e. cookies/second), not temporary CpS going on now
-  CM.Strategy.trueCpS = Game.cookiesPs / CM.Strategy.currentBuff;
+  AP.trueCpS = Game.cookiesPs / AP.currentBuff;
 }
 
 //
@@ -754,13 +749,13 @@ CM.Disp.PlaySound = function(url) {
   // CM.Disp.PlaySound is called unconditionally, but then checks the options
   // to determine whether to actually play the sound, so even if the sound
   // option is off, we can use this to auto-click golden cookies.  :-)
-  CM.Strategy.ShimmerAppeared();
-  CM.Strategy.oldPlaySound(url);
+  AP.ShimmerAppeared();
+  AP.oldPlaySound(url);
 }
 
 CM.Cache.RemakePP = function() {
-  CM.Strategy.oldRemakePP();
+  AP.oldRemakePP();
 
-  CM.Strategy.recomputeBuffs();
-  CM.Strategy.handlePurchases();
+  AP.recomputeBuffs();
+  AP.handlePurchases();
 }
