@@ -717,6 +717,100 @@ AP.recomputeBuffs = function() {
   AP.trueCpS = Game.cookiesPs / AP.currentBuff;
 }
 
+/*** Configuration choices for the "Options" menu ***/
+
+AP.ConfigInit = function() {
+
+  AP.ConfigData = {}
+  AP.Config = {}
+  AP.ConfigPrefix = 'APConfig';
+
+  AP.Config = { // See AP.ConfigData for meanings
+    GlobalEnable: 0,
+    AutoPurchaseTypes: 3,
+    AutoPurchase: 3,
+    BigCookieClicks: 1,
+    ShimmerTypes: 1,
+    ShimmerClicking: 1,
+  };
+  AP.ConfigData.GlobalEnable = {
+    label: ['Disabled',
+            'Enabled'],
+    desc: 'Whether AutoPlay is enabled; if not, options below are irrelevant'
+    };
+  AP.ConfigData.AutoPurchaseTypes = {
+    label: ['None',
+            'Just Buildings',
+            'Just Upgrades & Research',
+            'Buildings & Upgrades & Research'],
+    desc: 'Types of purchases to automatically make',
+    };
+  AP.ConfigData.AutoPurchase = {
+    label: ['Never',
+            'As soon as I have enough money',
+            'Leave a little buffer',
+            'Patience, grasshopper'],
+    desc: 'Automatic purchase timing for buildings and upgrades',
+    };
+  AP.ConfigData.BigCookieClicks = {
+    label: ['Never',
+            'Only during click specials'],
+    desc: 'When to automatically click the big cookie',
+    };
+  AP.ConfigData.ShimmerTypes = {
+    label: ["I'll click my own shimmers",
+            'Not them wrath cookies!',
+            'Click all the things!'],
+    desc: 'Shimmer types (golden/wrath cookies, eggs, reindeer) to autoclick',
+    };
+  AP.ConfigData.ShimmerClicking = {
+    label: ['Never',
+            'When they show up',
+            'Eh, whenever'],
+    desc: 'When to autoclick shimmers (golden/wrath cookies, eggs, reindeer)',
+    };
+}
+
+AP.ToggleConfig = function(config) {
+  AP.Config[config]++;
+  if (AP.Config[config] == AP.ConfigData[config].label.length)
+    AP.Config[config] = 0;
+  l(AP.ConfigPrefix + config).innerHTML =
+    AP.ConfigData[config].label[AP.Config[config]];
+}
+
+AP.AddMenuPref = function() {
+  var new_menu = document.createDocumentFragment();
+  var title = document.createElement('div');
+  title.className = 'title ' + CM.Disp.colorTextPre + CM.Disp.colorBlue;
+  title.textContent = 'Cookie Clicker AutoPlay';
+  new_menu.appendChild(title);
+
+  var listing = function(config) {
+    var div = document.createElement('div');
+    div.className = 'listing';
+    var a = document.createElement('a');
+    a.className = 'option';
+    a.id = AP.ConfigPrefix + config;
+    a.onclick = function() {AP.ToggleConfig(config);};
+    a.textContent = AP.ConfigData[config].label[AP.Config[config]];
+    div.appendChild(a);
+    var label = document.createElement('label');
+    label.textContent = AP.ConfigData[config].desc;
+    div.appendChild(label);
+    return div;
+  }
+
+  new_menu.appendChild(listing('GlobalEnable'));
+  new_menu.appendChild(listing('AutoPurchaseTypes'));
+  new_menu.appendChild(listing('AutoPurchase'));
+  new_menu.appendChild(listing('BigCookieClicks'));
+  new_menu.appendChild(listing('ShimmerTypes'));
+  new_menu.appendChild(listing('ShimmerClicking'));
+
+  l('menu').childNodes[2].insertBefore(new_menu, l('menu').childNodes[2].childNodes[l('menu').childNodes[2].childNodes.length - 1]);
+}
+
 /*** Monkey patching and initialization ***/
 
 AP.shimmerFunction = function(url) {
@@ -734,12 +828,21 @@ AP.RemakePP = function() {
   AP.handlePurchases();
 }
 
+AP.NewUpdateMenu = function() {
+  AP.Backup.UpdateMenu();
+  if (Game.onMenu == 'prefs')
+    AP.AddMenuPref();
+}
+
 AP.monkeyPatch = function() {
   AP.Backup.PlaySound = CM.Disp.PlaySound;
   CM.Disp.PlaySound = AP.shimmerFunction;
 
   AP.Backup.RemakePP = CM.Cache.RemakePP;
   CM.Cache.RemakePP = AP.RemakePP;
+
+  AP.Backup.UpdateMenu = Game.UpdateMenu;
+  Game.UpdateMenu = AP.NewUpdateMenu;
 }
 
 AP.SetSpecialConstants = function() {
@@ -804,7 +907,10 @@ AP.Init = function() {
       "Chocolate egg"]
   AP.SetSpecialConstants();
   AP.recomputeBuffs();
+  AP.ConfigInit();
   AP.monkeyPatch()
+
+  Game.UpdateMenu(); // must come after AP.monkeyPatch()
 }
 
-AP.Init()
+AP.Init();
