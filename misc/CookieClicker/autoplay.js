@@ -331,39 +331,50 @@ CM.Strategy.handleSpellsDuringBuffs = function() {
     return;
 
   if (CM.Strategy.cbg_better_than_fhof(0)) {
-    //if ((grimoire.magic >= 8 && selling) || (grimoire.magic >= 13)) {
+    // Do we have enough to cast diminish ineptitude and conjure baked goods?
     // FIXME: Add strategy to use when selling wizard towers; it could be
-    // even faster.
-    if (grimoire.magic >= 14 ||
-        (grimoire.magic >= 13 && CM.Strategy.currentBuffTimeLeft >= 72)) {
-      // First, cast diminish ineptitude.  Well, unless there's already a
-      // leftover diminish ineptitude from before.
-      time_left = CM.Strategy.currentBuffTimeLeft;
-      if (!Game.buffs["Magic adept"]) {
-        grimoire.castSpell(grimoire.spells["diminish ineptitude"])
-      } else {
-        time_left = Math.min(time_left, Game.buffs["Magic adept"].time/Game.fps);
-      }
+    //        even faster and should be able to do it with just 8 magic.
+    if (grimoire.magicM < 13)
+      return;
+    if (grimoire.magicM == 13 &&
+        (grimoire.magic != 13 || CM.Strategy.currentBuffTimeLeft < 72))
+      return;
+    if (grimoire.magicM >= 14 &&
+        grimoire.magic < Math.floor(0.6 * grimoire.magicM) + 7)
+      return;
 
-      // Next, setup a timeout to cast Conjure Baked Goods
-      if (Game.buffs["Magic adept"]) {
-        maxWait = 1000*(time_left-5);
-        minWait = 1000*Math.max(.5, time_left-10);
-        if (grimoire.magic < 14)
-          minWait = 66000;
-        setTimeout(CM.Strategy.conjureBakedGoods,
-                   CM.Strategy.Interval(minWait, maxWait))
-      } else {
-        console.log(`Diminish ineptitude failed; not trying to CBG at ${Date().toString()}`);
-      }
+    // First, cast diminish ineptitude.  Well, unless there's already a
+    // leftover diminish ineptitude from before.
+    time_left = CM.Strategy.currentBuffTimeLeft;
+    if (!Game.buffs["Magic adept"]) {
+      grimoire.castSpell(grimoire.spells["diminish ineptitude"])
+    } else {
+      time_left = Math.max(time_left, Game.buffs["Magic adept"].time/Game.fps);
     }
+
+    // If it failed, exit with a message
+    if (!Game.buffs["Magic adept"]) {
+      console.log(`Diminish ineptitude failed; not trying to CBG at ${Date().toString()}`);
+      return;
+    }
+
+    // Next, setup a timeout to cast Conjure Baked Goods
+    maxWait = 1000*(time_left-5);
+    minWait = 1000*Math.max(.5, time_left-10);
+    if (grimoire.magic < 14)
+      minWait = 66000;
+    setTimeout(CM.Strategy.conjureBakedGoods,
+               CM.Strategy.Interval(minWait, maxWait));
+
   } else {
-    if (grimoire.magic >= 23) {
-      // Cast the hand of fate, and trigger a timeout to act on it
-      grimoire.castSpell(grimoire.spells["hand of fate"])
-      CM.Strategy.logHandOfFateCookie = true;
-      setTimeout(CM.Strategy.shimmerAct, CM.Strategy.Interval(3000, 4000))
-    }
+    // Do we have enough to cast hand of fate?
+    if (grimoire.magic < Math.floor(0.6 * grimoire.magicM) + 10)
+      return;
+
+    // Cast the hand of fate, and trigger a timeout to act on it
+    grimoire.castSpell(grimoire.spells["hand of fate"])
+    CM.Strategy.logHandOfFateCookie = true;
+    setTimeout(CM.Strategy.shimmerAct, CM.Strategy.Interval(3000, 4000))
   }
 }
 
