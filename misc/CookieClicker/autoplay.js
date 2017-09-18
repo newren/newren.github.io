@@ -108,9 +108,9 @@ AP.doClicking = function() {
 }
 
 AP.shimmerAct = function() {
-  // shimmerAppeared() won't be called after initiating cookie for cookie
-  // chains and cookie Storms, so we need to check if there are more cookies
-  // manually here.
+  // ShimmerAppeared() won't be called after the initiating cookie for
+  // either cookie chains and cookie Storms, so we need to check if there
+  // are more cookies manually here.
   if (Game.shimmers.length)
     AP.popOne();
 
@@ -130,7 +130,8 @@ AP.shimmerAct = function() {
 AP.popOne = function() {
   if (Date.now() - AP.timer.lastPop > 1000) {
     Game.shimmers.some(function(shimmer) {
-      if (shimmer.type !== 'golden' || shimmer.wrath === 0) {
+      if (shimmer.type !== 'golden' || shimmer.wrath === 0 ||
+          AP.Config.ShimmerTypes == 2) {  // FIXME, Maybe not the unlucky wraths from Force Hand of Fate?
         shimmer.pop();
         AP.timer.lastPop = Date.now();
         var [minw, maxw] = [1000, 2000];
@@ -159,8 +160,13 @@ AP.popOne = function() {
 }
 
 AP.ShimmerAppeared = function() {
-  min = 1000 * (1 + Game.shimmers[Game.shimmers.length-1].dur / 12)
-  max = min + 4000
+  if (AP.Config.ShimmerClicking == 1) {
+    min = 1000 * (1 + Game.shimmers[Game.shimmers.length-1].dur / 12);
+    max = min + 4000;
+  } else if (AP.Config.ShimmerClicking == 2) {
+    min = 1000 * (1 + Game.shimmers[Game.shimmers.length-1].dur / 12);
+    max = 1000 * (1 + Game.shimmers[Game.shimmers.length-1].life / Game.fps);
+  }
   setTimeout(AP.popOne, AP.Interval(min, max))
 }
 
@@ -487,15 +493,21 @@ AP.getTruePP = function(item, price) {
     // CookieMonster simply returns Infinity for.
     special_factor = AP.specialPPfactor[item]
     if (special_factor) {
+      if (!AP.Options.clickSomeShimmers())
+        special_factor = Math.max(special_factor, 0.5);
       pp = Game.Upgrades[item].getPrice() / (special_factor * cps);
     } else {
       pp = CM.Cache.Upgrades[item].pp * AP.currentBuff;
     }
   } else if (CM.Cache.Objects[item]) {
-    bsf = AP.building_special_factor;
-    bs_pp = Math.max(0, Game.Objects[item].getPrice()-Game.cookies) / cps +
-            Game.Objects[item].getPrice() / (bsf * cps)
-    pp = Math.min(CM.Cache.Objects[item].pp * AP.currentBuff, bs_pp);
+    if (AP.Options.clickSomeShimmers()) {
+      bsf = AP.building_special_factor;
+      bs_pp = Math.max(0, Game.Objects[item].getPrice()-Game.cookies) / cps +
+              Game.Objects[item].getPrice() / (bsf * cps)
+      pp = Math.min(CM.Cache.Objects[item].pp * AP.currentBuff, bs_pp);
+    } else {
+      pp = CM.Cache.Objects[item].pp;
+    }
   }
 
   // Return what we found
@@ -849,13 +861,19 @@ AP.Options.purchaseUpgrades = function() {
   return AP.Config.GlobalEnable != 0 && (AP.Config.AutoPurchaseTypes & 2);
 }
 
+AP.Options.clickSomeShimmers = function() {
+  return AP.Config.GlobalEnable != 0 &&
+    AP.Config.ShimmerTypes != 0 && AP.Config.ShimmerClicking != 0;
+}
+
 /*** Monkey patching and initialization ***/
 
 AP.shimmerFunction = function(url) {
   // CM.Disp.PlaySound is called unconditionally, but then checks the options
   // to determine whether to actually play the sound, so even if the sound
   // option is off, we can use this to auto-click golden cookies.  :-)
-  AP.ShimmerAppeared();
+  if (AP.Options.clickSomeShimmers())
+    AP.ShimmerAppeared();
   AP.Backup.PlaySound(url);
 }
 
