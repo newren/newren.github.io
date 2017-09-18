@@ -1,13 +1,13 @@
 // autoplay.js: An extension to make Cookie Clicker more like IdleRPG
 //
 // This extension models a human-like player with below average reaction
-// time and speed.  It basically does just a few things:
+// time and speed.  It basically does just a few things, all configurable:
 //   * Makes purchases (max of 1 purchase per five seconds)
 //   * Clicks on golden cookies and reindeer (after human-like delay)
 //   * Clicks on the big cookie during ClickFrenzies/DragonFlights
 //     (5 or so times per second, after human like delay)
-//   * Occasionally takes advantage of Pantheon/Grimoire if conditions
-//     are just right (including buying AND selling buildings)
+//   * Occasionally takes advantage of a couple capabilities from the
+//     Pantheon and Grimoire minigames if conditions are just right
 //
 // The mediocre reaction time has a few downsides, which I intend to not fix:
 //   * It often fails to complete chains from golden cookies
@@ -27,7 +27,7 @@
 //     * The background selector
 //     * The golden switch
 //   * It won't interact with Krumblor (the dragon)
-//   * It won't select spirits for the Pantheon minigame
+//   * It won't select most spirits for the Pantheon minigame
 //   * It won't cast most the spells from the Grimoire minigame
 //   * It only collects achievements for things related to normal operations
 //     (buying buildings, clicking on golden cookies, maybe an occasional
@@ -67,11 +67,7 @@
 AP = {};
 AP.Options = {}
 
-/*** Shimmer-related functions ***/
-
-AP.Interval = function(lower, upper) {
-  return lower + (upper-lower)*Math.random();
-}
+/*** Big Cookie clicking related functions ***/
 
 AP.clickingNeeded = function() {
   return AP.currentClickBuff > 1 && AP.Config.BigCookieClicks == 1;
@@ -106,6 +102,8 @@ AP.doClicking = function() {
     }
   }
 }
+
+/*** Shimmer-related functions ***/
 
 AP.shimmerAct = function() {
   // ShimmerAppeared() won't be called after the initiating cookie for
@@ -724,6 +722,10 @@ AP.handlePurchases = function() {
 }
 
 /*** Miscellaneous functions ***/
+
+AP.Interval = function(lower, upper) {
+  return lower + (upper-lower)*Math.random();
+}
 
 AP.recomputeBuffs = function() {
   // Determine various information about the current buffs going on:
