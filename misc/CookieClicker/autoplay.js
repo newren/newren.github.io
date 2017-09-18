@@ -65,6 +65,7 @@
 /*** Overall Variables ***/
 
 AP = {};
+AP.Options = {}
 
 /*** Shimmer-related functions ***/
 
@@ -524,7 +525,7 @@ AP.determineBestBuy = function(metric) {
   // First purchase is always a Cursor.  Also, when we haven't yet bought
   // anything, pp for all upgrades is NaN or Infinity, so we really do
   // need a special case here.
-  if (Game.cookiesPs === 0) {
+  if (Game.cookiesPs === 0 && AP.Options.purchaseBuildings()) {
     return {name: "Cursor", price: Game.Objects.Cursor.getPrice(),
             pp: CM.Cache.Objects.Cursor.pp, obj: Game.Objects.Cursor}
   }
@@ -532,26 +533,30 @@ AP.determineBestBuy = function(metric) {
   // Find the item with the lowest projected payoff
   lowestPP = Number.MAX_VALUE;
   best = {};
-  for (item in CM.Cache.Upgrades) {
-    if (Game.Upgrades[item].unlocked) {
-      if (AP.upgradesToIgnore.indexOf(item) === -1) {
-        price = Game.Upgrades[item].getPrice();
-        pp = metric(item, price);
-        if (pp < lowestPP) {
-          lowestPP = pp;
-          best = {name: item, price: price, pp: pp, obj: Game.Upgrades[item]}
-        } //else { console.log(`Skipping ${item}; not better PP`) }
-      } //else { console.log(`Skipping ${item}; in ignore list`) }
-    } //else { console.log(`Skipping ${item}; not unlocked`) }
+  if (AP.Options.purchaseUpgrades()) {
+    for (item in CM.Cache.Upgrades) {
+      if (Game.Upgrades[item].unlocked) {
+        if (AP.upgradesToIgnore.indexOf(item) === -1) {
+          price = Game.Upgrades[item].getPrice();
+          pp = metric(item, price);
+          if (pp < lowestPP) {
+            lowestPP = pp;
+            best = {name: item, price: price, pp: pp, obj: Game.Upgrades[item]}
+          } //else { console.log(`Skipping ${item}; not better PP`) }
+        } //else { console.log(`Skipping ${item}; in ignore list`) }
+      } //else { console.log(`Skipping ${item}; not unlocked`) }
+    }
   }
-  for (item in CM.Cache.Objects) {
-    price = Game.Objects[item].getPrice();
-    pp = metric(item, price);
-    pp = Math.max(pp, AP.itemLimitsForMinigames(item, price));
-    if (pp < lowestPP) {
-      lowestPP = pp;
-      best = {name: item, price: price, pp: pp, obj: Game.Objects[item]}
-    } //else { console.log(`Skipping ${item}; not better PP`) }
+  if (AP.Options.purchaseBuildings()) {
+    for (item in CM.Cache.Objects) {
+      price = Game.Objects[item].getPrice();
+      pp = metric(item, price);
+      pp = Math.max(pp, AP.itemLimitsForMinigames(item, price));
+      if (pp < lowestPP) {
+        lowestPP = pp;
+        best = {name: item, price: price, pp: pp, obj: Game.Objects[item]}
+      } //else { console.log(`Skipping ${item}; not better PP`) }
+    }
   }
   return best
 }
@@ -811,6 +816,19 @@ AP.AddMenuPref = function() {
   l('menu').childNodes[2].insertBefore(new_menu, l('menu').childNodes[2].childNodes[l('menu').childNodes[2].childNodes.length - 1]);
 }
 
+AP.Options.doSomePurchases = function() {
+  return AP.Config.GlobalEnable != 0 &&
+    AP.Config.AutoPurchaseTypes != 0 && AP.Config.AutoPurchase != 0;
+}
+
+AP.Options.purchaseBuildings = function() {
+  return AP.Config.GlobalEnable != 0 && (AP.Config.AutoPurchaseTypes & 1);
+}
+
+AP.Options.purchaseUpgrades = function() {
+  return AP.Config.GlobalEnable != 0 && (AP.Config.AutoPurchaseTypes & 2);
+}
+
 /*** Monkey patching and initialization ***/
 
 AP.shimmerFunction = function(url) {
@@ -825,7 +843,8 @@ AP.RemakePP = function() {
   AP.Backup.RemakePP();
 
   AP.recomputeBuffs();
-  AP.handlePurchases();
+  if (AP.Options.doSomePurchases())
+    AP.handlePurchases();
 }
 
 AP.NewUpdateMenu = function() {
