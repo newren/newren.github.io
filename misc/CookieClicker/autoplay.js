@@ -74,7 +74,7 @@ AP.Interval = function(lower, upper) {
 }
 
 AP.clickingNeeded = function() {
-  return AP.currentClickBuff > 1;
+  return AP.currentClickBuff > 1 && AP.Config.BigCookieClicks == 1;
 }
 
 AP.doClicking = function() {
@@ -252,6 +252,13 @@ AP.spiritOfRuinActions = function() {
 /*** Spell-casting ***/
 
 AP.cbg_better_than_fhof = function(just_determining_bank_buffer) {
+  // Exit early if big cookie clicks aren't wanted.  The whole point of
+  // Force Hand Of Fate is to try to get click frenzies, which are only
+  // useful if we're doing auto-clicking.  So if the user doesn't want us
+  // auto-clicking, Conjure Baked Goods is always better.
+  if (AP.Config.BigCookieClicks == 0)
+    return true;
+
   if (just_determining_bank_buffer) {
     // buff_time will be min'ed with 26 or 13, we don't want to limit further
     // than that, so just pick something arbitrarily large.
