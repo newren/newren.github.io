@@ -561,7 +561,7 @@ AP.determineBestBuy = function(metric) {
   return best
 }
 
-AP.determineBankBuffer = function(item_pp) {
+AP.determinePatientBankBuffer = function(item_pp) {
   // Special case getting started
   if (Game.cookiesPs === 0)
     return 0;
@@ -610,6 +610,19 @@ AP.determineBankBuffer = function(item_pp) {
       return CM.Cache.Lucky - cookies_before_gc;
     return 0;
   }
+}
+
+AP.determineBankBuffer = function(item_pp) {
+  if (AP.Config.AutoPurchase == 1)
+    return 0;
+  else if (AP.Config.AutoPurchase == 2)
+    // Save 5 minutes of CpS per log_100(CpS), technically maxing out at
+    // 105 minutes (== 7*15), though it's really hard to hit that max
+    return 300 * AP.trueCpS * Math.min(21, 0.5*Math.log10(AP.trueCpS))
+  else if (AP.Config.AutoPurchase == 3)
+    return AP.determinePatientBankBuffer(item_pp);
+
+  console.error(`Invalid AP.Config.AutoPurchase value of ${AP.Config.AutoPurchase} in AP.determineBankBuffer`);
 }
 
 AP.handlePurchases = function() {
