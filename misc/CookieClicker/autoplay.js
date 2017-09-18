@@ -39,68 +39,11 @@
 // to frequently check on the game and makes it more of an infrequent check-up
 // and tweaking.  Just the way I like it.
 
+/*** Overall Variables ***/
+
 AP = {};
-AP.oldPlaySound = CM.Disp.PlaySound;
-AP.oldRemakePP = CM.Cache.RemakePP;
-AP.timer = {};
-AP.timer.lastPop = Date.now();
-AP.timer.lastPurchaseCheck = Date.now();
-AP.lastResets = Game.resets - 1;
-AP.buildingMax = {};
-AP.spiritOfRuinDelayTokens = 0;
-AP.spiritOfRuinDelayBeforeBuying = false;
-AP.spiritOfRuinPreviousCursors = 0;
-AP.logHandOfFateCookie = false;
-AP.clickInterval = undefined;
-AP.currentBuff = 1;
-AP.currentNumBuffs = 0; // Normal only, not click buffs
-AP.currentBuffTimeLeft = 0;
-AP.currentClickBuff = 1;
-AP.currentClickBuffTimeLeft = 0;
-AP.upgradesToIgnore = [
-    "Golden switch [off]",
-    "Golden switch [on]",
-    "Background selector",
-    "Milk selector",
-    "One mind",
-    "Communal brainsweep",
-    "Elder Pact",
-    "Elder Covenant",
-    "Elder Pledge",
-    "Festive biscuit",
-    "Ghostly biscuit",
-    "Lovesick biscuit",
-    "Fool's biscuit",
-    "Bunny biscuit",
-    "Chocolate egg"]
-AP.specialPPfactor =
-  { "Lucky day":          1.4,
-    "Serendipity":        2.9,
-    "Get lucky":          8.3,
-    "Plastic mouse" :     0.04,
-    "Iron mouse" :        0.04,
-    "Titanium mouse" :    0.09,
-    "Adamantium mouse" :  0.09,
-    "Unobtainium mouse" : 0.09,
-    "Eludium mouse" :     0.71,
-    "Wishalloy mouse" :   0.71,
-    "Fantasteel mouse" :  0.71,
-    "Nevercrack mouse" :  0.71,
-    "Armythril mouse" :   0.71,
-  }
-// Assumes Dragon Harvest aura is active.  Stacked power-ups are cool.
-AP.expected_factors = {  // Monte Carlo FTW
-  Frenzy       : { Frenzy:  2.82, Lucky:  1.95, Other:  2.26, Overall:  2.36 },
-  Lucky        : { Frenzy:  1.95, Lucky:  2.82, Other:  2.26, Overall:  2.36 },
-  DHBS         : { Frenzy:  4.18, Lucky:  4.18, Other:  4.48, Overall:  4.25 },
-  BS           : { Frenzy:  7.59, Lucky:  7.58, Other:  7.89, Overall:  7.66 },
-  DH           : { Frenzy:  9.90, Lucky:  9.90, Other: 10.21, Overall:  9.97 },
-  ClickFrenzy  : { Frenzy: 19.27, Lucky: 19.26, Other: 19.57, Overall: 19.34 },
-  FrenzyXLucky : { Frenzy:  3.70, Lucky:  5.65, Other:  5.96, Overall:  4.97 },
-  FrenzyXDHoBS : { Frenzy: 10.58, Lucky: 12.53, Other: 12.84, Overall: 11.85 },
-  FrenzyXBS    : { Frenzy: 20.43, Lucky: 22.37, Other: 22.68, Overall: 21.70 },
-  FrenzyXDH    : { Frenzy: 27.15, Lucky: 29.10, Other: 29.43, Overall: 28.43 }
-}
+
+/*** Shimmer-related functions ***/
 
 AP.Interval = function(lower, upper) {
   return lower + (upper-lower)*Math.random();
@@ -227,6 +170,8 @@ AP.doClicking = function() {
     }
   }
 }
+
+/*** Spell-casting ***/
 
 AP.cbg_better_than_fhof = function(just_determining_bank_buffer) {
   if (just_determining_bank_buffer) {
@@ -432,6 +377,8 @@ AP.ShimmerAppeared = function() {
   max = min + 4000
   setTimeout(AP.popOne, AP.Interval(min, max))
 }
+
+/*** Purchasing related functions ***/
 
 AP.getTruePP = function(item, price) {
   // pp == Projected Payoff, mostly calculated by CookieMonster
@@ -741,21 +688,94 @@ AP.recomputeBuffs = function() {
   AP.trueCpS = Game.cookiesPs / AP.currentBuff;
 }
 
-//
-// Monkey patching to hook into the relevant parts of CookieMonster follow
-//
+/*** Monkey patching and initialization ***/
 
-CM.Disp.PlaySound = function(url) {
+AP.shimmerFunction = function(url) {
   // CM.Disp.PlaySound is called unconditionally, but then checks the options
   // to determine whether to actually play the sound, so even if the sound
   // option is off, we can use this to auto-click golden cookies.  :-)
   AP.ShimmerAppeared();
-  AP.oldPlaySound(url);
+  AP.Backup.PlaySound(url);
 }
 
-CM.Cache.RemakePP = function() {
-  AP.oldRemakePP();
+AP.RemakePP = function() {
+  AP.Backup.RemakePP();
 
   AP.recomputeBuffs();
   AP.handlePurchases();
 }
+
+AP.monkeyPatch = function() {
+  AP.Backup.PlaySound = CM.Disp.PlaySound;
+  CM.Disp.PlaySound = AP.shimmerFunction;
+
+  AP.Backup.RemakePP = CM.Cache.RemakePP;
+  CM.Cache.RemakePP = AP.RemakePP;
+}
+
+AP.SetSpecialConstants = function() {
+  AP.specialPPfactor =
+    { "Lucky day":          1.4,
+      "Serendipity":        2.9,
+      "Get lucky":          8.3,
+      "Plastic mouse" :     0.04,
+      "Iron mouse" :        0.04,
+      "Titanium mouse" :    0.09,
+      "Adamantium mouse" :  0.09,
+      "Unobtainium mouse" : 0.09,
+      "Eludium mouse" :     0.71,
+      "Wishalloy mouse" :   0.71,
+      "Fantasteel mouse" :  0.71,
+      "Nevercrack mouse" :  0.71,
+      "Armythril mouse" :   0.71,
+    }
+  // Assumes Dragon Harvest aura is active.  Stacked power-ups are cool.
+  AP.expected_factors = {  // Monte Carlo FTW
+    Frenzy       : { Frenzy:  2.82, Lucky:  1.95, Other:  2.26, Overall:  2.36 },
+    Lucky        : { Frenzy:  1.95, Lucky:  2.82, Other:  2.26, Overall:  2.36 },
+    DHBS         : { Frenzy:  4.18, Lucky:  4.18, Other:  4.48, Overall:  4.25 },
+    BS           : { Frenzy:  7.59, Lucky:  7.58, Other:  7.89, Overall:  7.66 },
+    DH           : { Frenzy:  9.90, Lucky:  9.90, Other: 10.21, Overall:  9.97 },
+    ClickFrenzy  : { Frenzy: 19.27, Lucky: 19.26, Other: 19.57, Overall: 19.34 },
+    FrenzyXLucky : { Frenzy:  3.70, Lucky:  5.65, Other:  5.96, Overall:  4.97 },
+    FrenzyXDHoBS : { Frenzy: 10.58, Lucky: 12.53, Other: 12.84, Overall: 11.85 },
+    FrenzyXBS    : { Frenzy: 20.43, Lucky: 22.37, Other: 22.68, Overall: 21.70 },
+    FrenzyXDH    : { Frenzy: 27.15, Lucky: 29.10, Other: 29.43, Overall: 28.43 }
+  }
+}
+
+AP.Init = function() {
+  AP.Backup = {};
+  AP.timer = {};
+
+  AP.timer.lastPop = Date.now();
+  AP.timer.lastPurchaseCheck = Date.now();
+  AP.lastResets = Game.resets - 1;
+  AP.buildingMax = {};
+  AP.spiritOfRuinDelayTokens = 0;
+  AP.spiritOfRuinDelayBeforeBuying = false;
+  AP.spiritOfRuinPreviousCursors = 0;
+  AP.logHandOfFateCookie = false;
+  AP.clickInterval = undefined;
+  AP.upgradesToIgnore = [
+      "Golden switch [off]",
+      "Golden switch [on]",
+      "Background selector",
+      "Milk selector",
+      "One mind",
+      "Communal brainsweep",
+      "Elder Pact",
+      "Elder Covenant",
+      "Elder Pledge",
+      "Festive biscuit",
+      "Ghostly biscuit",
+      "Lovesick biscuit",
+      "Fool's biscuit",
+      "Bunny biscuit",
+      "Chocolate egg"]
+  AP.SetSpecialConstants();
+  AP.recomputeBuffs();
+  AP.monkeyPatch()
+}
+
+AP.Init()
