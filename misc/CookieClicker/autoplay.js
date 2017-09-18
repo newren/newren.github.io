@@ -53,10 +53,94 @@ AP.clickingNeeded = function() {
   return AP.currentClickBuff > 1;
 }
 
-AP.costToPurchase = function(count, base_price) {
-  cost_factor = (Math.pow(1.15,count) - 1) / (1.15 - 1);
-  return cost_factor * base_price;
+AP.doClicking = function() {
+  // Recompute the buffs as we use that info in some of our sub-functions
+  // (mostly just to see if there's still a clicking buff or whether there's
+  // enough time left in it to do more spiritOfRuinActions)
+  AP.recomputeBuffs();
+
+  // Check if we can boost our click power by buying and selling buildings
+  if (AP.spiritOfRuinActions()) {
+    // Buying and selling buildings and simultaneously clicking on the big
+    // cookie isn't something a human would be able to do, so just return
+    // early.
+    return
+  }
+
+  // We're called every .1 seconds, want some randomness to our clicking,
+  // and want to average about 5 clicks per second
+  if (Math.random() < 1/2) {
+    Game.mouseX = Game.cookieOriginX+5;
+    Game.mouseY = Game.cookieOriginY+5;
+    Game.ClickCookie();
+    if (!AP.clickingNeeded()) {
+      clearInterval(AP.clickInterval);
+      AP.clickInterval = undefined;
+      // Make there be a good gap between a clicking frenzy and any purchase
+      // automatically made afterward.
+      AP.timer.lastPurchaseCheck = Date.now() + 5000;
+    }
+  }
 }
+
+AP.shimmerAct = function() {
+  // shimmerAppeared() won't be called after initiating cookie for cookie
+  // chains and cookie Storms, so we need to check if there are more cookies
+  // manually here.
+  if (Game.shimmers.length)
+    AP.popOne();
+
+  // After a golden cookie is clicked, check to see if it was one that
+  // needs lots of clicking on the big cookie
+  if (!AP.clickInterval && AP.clickingNeeded()) {
+    console.log(`Mouse click multiplier buff detected at ${Date().toString()}`);
+    AP.clickInterval = setInterval(AP.doClicking, 100);
+  }
+
+  // Otherwise, check to see if we want to take advantage of some spell
+  // casting
+  else
+    AP.handleSpellsDuringBuffs();
+}
+
+AP.popOne = function() {
+  if (Date.now() - AP.timer.lastPop > 1000) {
+    Game.shimmers.some(function(shimmer) {
+      if (shimmer.type !== 'golden' || shimmer.wrath === 0) {
+        shimmer.pop();
+        AP.timer.lastPop = Date.now();
+        var [minw, maxw] = [1000, 2000];
+        if (Game.shimmerTypes.golden.last === 'chain cookie')
+          [minw, maxw] = [4500, 5750];
+        setTimeout(AP.shimmerAct, AP.Interval(minw, maxw));
+        if (AP.logHandOfFateCookie) {
+          AP.logHandOfFateCookie = false;
+          console.log(`Hand of Fate resulted in ` +
+                      `${Game.shimmerTypes.golden.last} golden cookie ` +
+                      `during x${AP.currentBuff} buff ` +
+                      `at ${Date().toString()}`)
+        }
+        return true;
+      }
+      else if (AP.logHandOfFateCookie &&
+               shimmer.type === 'golden' && shimmer.wrath) {
+        AP.logHandOfFateCookie = false;
+        console.log(`Hand of Fate resulted in wrath cookie at ` +
+                    `${Date().toString()}`)
+      }
+    });
+  } else if (Game.shimmers.length) {
+    setTimeout(AP.popOne, 1000 - (Date.now() - AP.timer.lastPop))
+  }
+}
+
+AP.ShimmerAppeared = function() {
+  min = 1000 * (1 + Game.shimmers[Game.shimmers.length-1].dur / 12)
+  max = min + 4000
+  setTimeout(AP.popOne, AP.Interval(min, max))
+}
+
+/*** Pantheon actions ***/
 
 AP.spiritOfRuinActions = function() {
   action_taken = true;
@@ -139,36 +223,6 @@ AP.spiritOfRuinActions = function() {
 
   // We didn't do anything, let caller know they can click the big cookie
   return !action_taken;
-}
-
-AP.doClicking = function() {
-  // Recompute the buffs as we use that info in some of our sub-functions
-  // (mostly just to see if there's still a clicking buff or whether there's
-  // enough time left in it to do more spiritOfRuinActions)
-  AP.recomputeBuffs();
-
-  // Check if we can boost our click power by buying and selling buildings
-  if (AP.spiritOfRuinActions()) {
-    // Buying and selling buildings and simultaneously clicking on the big
-    // cookie isn't something a human would be able to do, so just return
-    // early.
-    return
-  }
-
-  // We're called every .1 seconds, want some randomness to our clicking,
-  // and want to average about 5 clicks per second
-  if (Math.random() < 1/2) {
-    Game.mouseX = Game.cookieOriginX+5;
-    Game.mouseY = Game.cookieOriginY+5;
-    Game.ClickCookie();
-    if (!AP.clickingNeeded()) {
-      clearInterval(AP.clickInterval);
-      AP.clickInterval = undefined;
-      // Make there be a good gap between a clicking frenzy and any purchase
-      // automatically made afterward.
-      AP.timer.lastPurchaseCheck = Date.now() + 5000;
-    }
-  }
 }
 
 /*** Spell-casting ***/
@@ -321,64 +375,77 @@ AP.handleSpellsDuringBuffs = function() {
   }
 }
 
-AP.shimmerAct = function() {
-  // shimmerAppeared() won't be called after initiating cookie for cookie
-  // chains and cookie Storms, so we need to check if there are more cookies
-  // manually here.
-  if (Game.shimmers.length)
-    AP.popOne();
+/*** Figuring out expected time ***/
 
-  // After a golden cookie is clicked, check to see if it was one that
-  // needs lots of clicking on the big cookie
-  if (!AP.clickInterval && AP.clickingNeeded()) {
-    console.log(`Mouse click multiplier buff detected at ${Date().toString()}`);
-    AP.clickInterval = setInterval(AP.doClicking, 100);
-  }
+AP.expectedTimeUntil = function(gcevent) {
+  // Get information about how often cookies appear
+  mint = Game.shimmerTypes.golden.minTime/Game.fps;
+  maxt = Game.shimmerTypes.golden.maxTime/Game.fps;
+  used = Game.shimmerTypes.golden.time/Game.fps;
 
-  // Otherwise, check to see if we want to take advantage of some spell
-  // casting
-  else
-    AP.handleSpellsDuringBuffs();
+  // Rough estimate of how often they appear on average
+  ave = 0.75*mint + 0.25*maxt;
+
+  // Determine the last type that appeared
+  map = {'frenzy': 'Frenzy', 'multiply cookies': 'Lucky'};
+  lastType = map[Game.shimmerTypes.golden.last] || 'Other';
+
+  // Expected time
+  return ave * AP.expected_factors[gcevent][lastType] -
+         Math.min(used, ave);
 }
 
-AP.popOne = function() {
-  if (Date.now() - AP.timer.lastPop > 1000) {
-    Game.shimmers.some(function(shimmer) {
-      if (shimmer.type !== 'golden' || shimmer.wrath === 0) {
-        shimmer.pop();
-        AP.timer.lastPop = Date.now();
-        var [minw, maxw] = [1000, 2000];
-        if (Game.shimmerTypes.golden.last === 'chain cookie')
-          [minw, maxw] = [4500, 5750];
-        setTimeout(AP.shimmerAct, AP.Interval(minw, maxw));
-        if (AP.logHandOfFateCookie) {
-          AP.logHandOfFateCookie = false;
-          console.log(`Hand of Fate resulted in ` +
-                      `${Game.shimmerTypes.golden.last} golden cookie ` +
-                      `during x${AP.currentBuff} buff ` +
-                      `at ${Date().toString()}`)
-        }
-        return true;
-      }
-      else if (AP.logHandOfFateCookie &&
-               shimmer.type === 'golden' && shimmer.wrath) {
-        AP.logHandOfFateCookie = false;
-        console.log(`Hand of Fate resulted in wrath cookie at ` +
-                    `${Date().toString()}`)
-      }
-    });
-  } else if (Game.shimmers.length) {
-    setTimeout(AP.popOne, 1000 - (Date.now() - AP.timer.lastPop))
-  }
+AP.reasonableCookiesBeforeGC = function() {
+  // Also compute how much we are almost certain we can earn before we
+  // get a golden cookie
+  maxt = Game.shimmerTypes.golden.maxTime/Game.fps;
+  used = Game.shimmerTypes.golden.time/Game.fps;
+  min_reasonable_time_until_gc = Math.min(0, (5.0/12*maxt)-used);
+
+  normal_cookies = min_reasonable_time_until_gc * AP.trueCpS;
+  buffed_cookies = AP.currentBuff *
+    Math.min(min_reasonable_time_until_gc, AP.currentBuffTimeLeft);
+  cookies_before_gc = Math.max(normal_cookies, buffed_cookies);
+
+  return cookies_before_gc;
 }
 
-AP.ShimmerAppeared = function() {
-  min = 1000 * (1 + Game.shimmers[Game.shimmers.length-1].dur / 12)
-  max = min + 4000
-  setTimeout(AP.popOne, AP.Interval(min, max))
+AP.timeUntilMagicFill = function(desired_level) {
+  grimoire = Game.Objects["Wizard tower"].minigame
+
+  // A human being only knows the floor of our actual magic.  So act like
+  // that's all we know
+  cur_magic = Math.floor(grimoire.magic);
+  max_magic = grimoire.magicM;
+  if (!desired_level)
+    desired_level = grimoire.magicM;
+
+  // Never cast spells if Diminish Ineptitude backfired and the backfire is
+  // still active.
+  inept_time = 0;
+  if (Game.buffs["Magic inept"])
+    inept_time = Game.buffs["Magic inept"].time/Game.fps;
+
+  // If we already have enough, wait time is zero.
+  if (grimoire.magic >= desired_level)
+    return inept_time;
+
+  // Solution to continuous integral approximation of the actual discrete
+  // integral formula used to calculate magic does a really good job of
+  // pegging exactly how much time we need -- well, assuming that "cur_magic"
+  // is actually close, that is.
+  fill_time = 100.0 / 3 * Math.sqrt(Math.max(100,max_magic)) *
+              (Math.sqrt(max_magic) - Math.sqrt(cur_magic));
+
+  return Math.max(inept_time, fill_time);
 }
 
 /*** Purchasing related functions ***/
+
+AP.costToPurchase = function(count, base_price) {
+  cost_factor = (Math.pow(1.15,count) - 1) / (1.15 - 1);
+  return cost_factor * base_price;
+}
 
 AP.getTruePP = function(item, price) {
   // pp == Projected Payoff, mostly calculated by CookieMonster
@@ -398,7 +465,7 @@ AP.getTruePP = function(item, price) {
     bs_pp = Math.max(0, Game.Objects[item].getPrice()-Game.cookies) / cps +
             Game.Objects[item].getPrice() / (bsf * cps)
     pp = Math.min(CM.Cache.Objects[item].pp * AP.currentBuff, bs_pp);
-}
+  }
 
   // Return what we found
   return pp;
@@ -464,69 +531,6 @@ AP.determineBestBuy = function(metric) {
     } //else { console.log(`Skipping ${item}; not better PP`) }
   }
   return best
-}
-
-AP.expectedTimeUntil = function(gcevent) {
-  // Get information about how often cookies appear
-  mint = Game.shimmerTypes.golden.minTime/Game.fps;
-  maxt = Game.shimmerTypes.golden.maxTime/Game.fps;
-  used = Game.shimmerTypes.golden.time/Game.fps;
-
-  // Rough estimate of how often they appear on average
-  ave = 0.75*mint + 0.25*maxt;
-
-  // Determine the last type that appeared
-  map = {'frenzy': 'Frenzy', 'multiply cookies': 'Lucky'};
-  lastType = map[Game.shimmerTypes.golden.last] || 'Other';
-
-  // Expected time
-  return ave * AP.expected_factors[gcevent][lastType] -
-         Math.min(used, ave);
-}
-
-AP.reasonableCookiesBeforeGC = function() {
-  // Also compute how much we are almost certain we can earn before we
-  // get a golden cookie
-  maxt = Game.shimmerTypes.golden.maxTime/Game.fps;
-  used = Game.shimmerTypes.golden.time/Game.fps;
-  min_reasonable_time_until_gc = Math.min(0, (5.0/12*maxt)-used);
-
-  normal_cookies = min_reasonable_time_until_gc * AP.trueCpS;
-  buffed_cookies = AP.currentBuff *
-    Math.min(min_reasonable_time_until_gc, AP.currentBuffTimeLeft);
-  cookies_before_gc = Math.max(normal_cookies, buffed_cookies);
-
-  return cookies_before_gc;
-}
-
-AP.timeUntilMagicFill = function(desired_level) {
-  grimoire = Game.Objects["Wizard tower"].minigame
-
-  // A human being only knows the floor of our actual magic.  So act like
-  // that's all we know
-  cur_magic = Math.floor(grimoire.magic);
-  max_magic = grimoire.magicM;
-  if (!desired_level)
-    desired_level = grimoire.magicM;
-
-  // Never cast spells if Diminish Ineptitude backfired and the backfire is
-  // still active.
-  inept_time = 0;
-  if (Game.buffs["Magic inept"])
-    inept_time = Game.buffs["Magic inept"].time/Game.fps;
-
-  // If we already have enough, wait time is zero.
-  if (grimoire.magic >= desired_level)
-    return inept_time;
-
-  // Solution to continuous integral approximation of the actual discrete
-  // integral formula used to calculate magic does a really good job of
-  // pegging exactly how much time we need -- well, assuming that "cur_magic"
-  // is actually close, that is.
-  fill_time = 100.0 / 3 * Math.sqrt(Math.max(100,max_magic)) *
-              (Math.sqrt(max_magic) - Math.sqrt(cur_magic));
-
-  return Math.max(inept_time, fill_time);
 }
 
 AP.determineBankBuffer = function(item_pp) {
@@ -658,6 +662,8 @@ AP.handlePurchases = function() {
     AP.buildingMax[bldg] = Math.max(
       AP.buildingMax[bldg], Game.Objects[bldg].amount);
 }
+
+/*** Miscellaneous functions ***/
 
 AP.recomputeBuffs = function() {
   // Determine various information about the current buffs going on:
