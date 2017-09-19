@@ -285,8 +285,7 @@ AP.cbg_better_than_fhof = function(just_determining_bank_buffer) {
   }
 
   // Can't cast HofF if we don't have enough magic
-  grimoire = Game.Objects["Wizard tower"].minigame;
-  if (grimoire.magicM < 21) // Hopefully magicM >= 8 so we can cast cbg
+  if (AP.buildingMax["Wizard tower"] < 21)
     return true;
   has_ruin = (Game.hasGod && Game.hasGod("ruin"))
 
