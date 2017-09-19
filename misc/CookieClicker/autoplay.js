@@ -80,7 +80,7 @@ AP.doClicking = function() {
   AP.recomputeBuffs();
 
   // Check if we can boost our click power by buying and selling buildings
-  if (AP.spiritOfRuinActions()) {
+  if (AP.usage.spiritOfRuin == 2 && AP.spiritOfRuinActions()) {
     // Buying and selling buildings and simultaneously clicking on the big
     // cookie isn't something a human would be able to do, so just return
     // early.
@@ -291,7 +291,7 @@ AP.cbg_better_than_fhof = function(just_determining_bank_buffer) {
 
   // Which is better: conjuring baked goods or forcing the hand of fate?
   ruin_mult = 1;
-  if (has_ruin) {
+  if (has_ruin && AP.usage.spiritOfRuin == 2) {
     slot = has_ruin; // Game.hasGod returns which slot if it's in one
     ruin_factor = .01 * Math.pow(2, 1-slot);
     ruin_mult += ruin_factor * Game.Objects.Cursor.amount;
