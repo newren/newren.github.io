@@ -527,13 +527,18 @@ AP.getCheapItem = function(item, price) {
 }
 
 AP.itemLimitsForMinigames = function(item, price) {
-  // FIXME: It's probably some factor times trueCpS, not simply 1*trueCpS
-  if (item === "Cursor" && Game.hasGod && Game.hasGod("ruin") &&
-      Game.Objects.Mine.amount >= 5 && price > 1*AP.trueCpS)
+  if (AP.usage.spiritOfRuin > 0 && item === "Cursor" &&
+      Game.Objects.Cursor.amount >= 100 && price > 1*AP.trueCpS) {
     return Number.MAX_VALUE;
-  else if (item === "Wizard tower" && Game.Objects["Wizard tower"].minigame &&
-           Game.Objects.Portal.amount >= 5)
-    return Number.MAX_VALUE;
+  } else if (AP.usage.grimoire > 0 && item === "Wizard tower") {
+    if (AP.usage.grimoire == 2)
+      // Only buy towers to increase magic (done elsewhere), not because of
+      // cookie generation
+      return Number.MAX_VALUE;
+    // At this point, AP.usage.grimoire == 1
+    if (Game.Objects["Wizard tower"].amount >= 55 && price > 1*AP.trueCpS)
+      return Number.MAX_VALUE;
+  }
   return 0;
 }
 
