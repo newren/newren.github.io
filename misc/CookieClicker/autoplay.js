@@ -721,6 +721,57 @@ AP.handlePurchases = function() {
       AP.buildingMax[bldg], Game.Objects[bldg].amount);
 }
 
+/*** Code dealing with whether we should turn on "unusual" usage strategies **/
+
+AP.checkUnusualUsageStrategies = function() {
+  // AP.usage is for strategies that are either temporarily negative or are
+  // outright negative in specific facets but which may have benefits that
+  // outweigh the negatives, IF people aren't shocked/surprised and take
+  // action that circumvents the strategies (an all too likely occurrence
+  // that could exacerbate the negatives).  Even if they don't do anything
+  // amiss, the surprise factor itself could be too much of a shock.  So don't
+  // turn these on full unless it's clear the user wants them, and turn them
+  // back off if they take steps that would make the negatives too big.
+
+  if (Game.resets == 0)
+    return;
+
+  // Levels, for both spiritOfRuin and grimoire:
+  //   2: Take full advantage; buy/sell/rebuy buildings with abandon
+  //   1: Avoid buying too many of certain buildings so it won't be painful
+  //      to employ the strategy later, but don't actually sell the buildings.
+  //   0: Don't limit building purchases based on these strategies, and don't
+  //      ever sell buildings for these either.
+  if (Game.resets > 0 && Game.lastResets == 0) {
+    AP.usage.spiritOfRuin = 1;
+    AP.usage.grimoire =     1;
+  }
+
+  // First, handling of the spirit of ruin
+  cursor_amount = Game.Objects.Cursor.amount
+  if (Game.hasGod && Game.hasGod("ruin") && Game.Objects.Mine.amount >= 5) {
+    if (Game.Objects.Cursor.getPrice() > 1.15*AP.trueCpS && cursor_amount > 100)
+      AP.usage.spiritOfRuin = 0;
+    if (cursor_amount == 0 && AP.buildingMax.Cursor > 100)
+      AP.usage.spiritOfRuin = 2;
+  }
+
+  // Second, handling grimoire
+  tower_amount = Game.Objects["Wizard tower"].amount
+  if (AP.buildingMax["Wizard tower"] == 100 + tower_amount ||
+      AP.buildingMax["Wizard tower"] == 200 + tower_amount)
+    // We don't want Krumblor sacrifices to trigger this behavior.
+    AP.buildingMax["Wizard tower"] = tower_amount
+  grimoire = Game.Objects["Wizard tower"].minigame;
+  if (grimoire && Game.Objects.Portal.amount >= 5) {
+    if (Game.Objects["Wizard tower"].getPrice() > 1.15*AP.trueCpS &&
+        tower_amount > 55)
+      AP.usage.grimoire = 0;
+    if (tower_amount < AP.buildingMax["Wizard tower"] - 1)
+      AP.usage.grimoire = 2;
+  }
+}
+
 /*** Miscellaneous functions ***/
 
 AP.Interval = function(lower, upper) {
@@ -883,6 +934,7 @@ AP.RemakePP = function() {
   AP.Backup.RemakePP();
 
   AP.recomputeBuffs();
+  AP.checkUnusualUsageStrategies();
   if (AP.Options.doSomePurchases())
     AP.handlePurchases();
 }
@@ -941,13 +993,19 @@ AP.Init = function() {
 
   AP.timer.lastPop = Date.now();
   AP.timer.lastPurchaseCheck = Date.now();
-  AP.lastResets = Game.resets - 1;
   AP.buildingMax = {};
+  AP.clickInterval = undefined;
+  AP.logHandOfFateCookie = false;
+  AP.lastResets = Game.resets - 1;
+
+  AP.usage = {};
+  AP.usage.spiritOfRuin = (Game.resets > 0 ? 1 : 0);
+  AP.usage.grimoire =     (Game.resets > 0 ? 1 : 0);
+
   AP.spiritOfRuinDelayTokens = 0;
   AP.spiritOfRuinDelayBeforeBuying = false;
   AP.spiritOfRuinPreviousCursors = 0;
-  AP.logHandOfFateCookie = false;
-  AP.clickInterval = undefined;
+
   AP.upgradesToIgnore = [
       "Golden switch [off]",
       "Golden switch [on]",
