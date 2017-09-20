@@ -73,6 +73,14 @@ AP.clickingNeeded = function() {
   return AP.currentClickBuff > 1 && AP.Config.BigCookieClicks == 1;
 }
 
+AP.clearClickInterval = function() {
+  clearInterval(AP.clickInterval);
+  AP.clickInterval = undefined;
+  // Make there be a good gap between a clicking frenzy and any purchase
+  // automatically made afterward.
+  AP.timer.lastPurchaseCheck = Date.now() + 5000;
+}
+
 AP.doClicking = function() {
   // Recompute the buffs as we use that info in some of our sub-functions
   // (mostly just to see if there's still a clicking buff or whether there's
@@ -93,12 +101,15 @@ AP.doClicking = function() {
     Game.mouseX = Game.cookieOriginX+5;
     Game.mouseY = Game.cookieOriginY+5;
     Game.ClickCookie();
-    if (!AP.clickingNeeded()) {
-      clearInterval(AP.clickInterval);
-      AP.clickInterval = undefined;
-      // Make there be a good gap between a clicking frenzy and any purchase
-      // automatically made afterward.
-      AP.timer.lastPurchaseCheck = Date.now() + 5000;
+
+    // If clicking is no longer needed, we need to wrap things up.  Except
+    // that we sometimes like to click a few extra times after the buff ends,
+    // to mimic how a human would behave.
+    if (!AP.clickingNeeded() && Math.random() < 1/3) {
+      if (AP.usage.spiritOfRuin < 2)
+        AP.clearClickInterval();
+      else
+        AP.spiritOfRuinTimeToBuyBack = true;
     }
   }
 }
@@ -170,17 +181,24 @@ AP.ShimmerAppeared = function() {
 
 /*** Pantheon actions ***/
 
-AP.spiritOfRuinActions = function() {
+AP.spiritOfRuinActions = function(preclick) {
   action_taken = true;
 
-  // If the buff ends for needing to click, don't bother taking any further
-  // action.
+  // When the buff ends, we need to finish our last few unbuffed clicks before
+  // buying back the buildings
+  if (!AP.clickingNeeded() && !AP.spiritOfRuinTimeToBuyBack)
+    return !action_taken;
+
+  // If the buff ends for needing to click, and we've bought back our cursors,
+  // we don't bother taking any further action.
   if (!AP.clickingNeeded() &&
       Game.Objects.Cursor.amount >= AP.spiritOfRuinPreviousCursors) {
     AP.spiritOfRuinDelayTokens = 0;
     AP.spiritOfRuinDelayBeforeBuying = false;
     AP.spiritOfRuinPreviousCursors = 0;
-    return !action_taken;
+    AP.spiritOfRuinTimeToBuyBack = false;
+    AP.clearClickInterval();
+    return action_taken;
   }
 
   // Whenever we previously took an action, we need to delay a bit before
@@ -1009,6 +1027,7 @@ AP.Init = function() {
   AP.spiritOfRuinDelayTokens = 0;
   AP.spiritOfRuinDelayBeforeBuying = false;
   AP.spiritOfRuinPreviousCursors = 0;
+  AP.spiritOfRuinTimeToBuyBack = false;
 
   AP.upgradesToIgnore = [
       "Golden switch [off]",
