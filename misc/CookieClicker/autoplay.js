@@ -1013,6 +1013,7 @@ AP.Init = function() {
   AP.upgradesToIgnore = [
       "Golden switch [off]",
       "Golden switch [on]",
+      "Golden cookie sound selector",
       "Background selector",
       "Milk selector",
       "One mind",
