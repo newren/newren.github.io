@@ -262,6 +262,46 @@ AP.spiritOfRuinActions = function(preclick) {
   return !action_taken;
 }
 
+AP.adjustPantheon = function() {
+  pantheon_adjusted = true;
+
+  pantheon = Game.Objects.Temple.minigame
+  if (pantheon.swaps == 3) {
+    // Determine where we want this spirit
+    value = Math.floor((Date.now() % 86400000) / 7200000)
+
+    cyclius = pantheon.gods["ages"].id
+    slot1available = (pantheon.slot[1] == -1) || (pantheon.slot[1] == cyclius)
+    slot2available = (pantheon.slot[2] == -1) || (pantheon.slot[2] == cyclius)
+
+    desiredSlot = false;
+    if (value <= 1 && slot1available && slot2available)
+      desiredSlot = 2
+    else if (value % 6 <= 2 && slot1available)
+      desiredSlot = 2
+    else if (value <= 5 && slot2available)
+      desiredSlot = 3
+
+    // Exit if we don't have him and don't want him.
+    if (!desiredSlot && !Game.hasGod('ages'))
+      return !pantheon_adjusted;
+
+    // Put Cyclius into the desired slot, if not already there
+    if (Game.hasGod('ages') != desiredSlot) {
+      pantheon.dragGod(pantheon.gods.ages);
+      // slots used are 0-2, even though hasGod returns 1-3.
+      // Also, kinda lame to get -1 from "false-1", but it works...
+      pantheon.hoverSlot(desiredSlot-1);
+      pantheon.dropGod();
+      console.log(`Moved Cyclius into slot ${desiredSlot} `+
+                  `at ${Date().toString()}`)
+      return pantheon_adjusted;
+    }
+  }
+
+  return !pantheon_adjusted;
+}
+
 /*** Spell-casting ***/
 
 AP.cbg_better_than_fhof = function(just_determining_bank_buffer) {
@@ -775,6 +815,9 @@ AP.handlePurchases = function() {
     // One adjustment usually isn't enough; make sure we keep adjusting until
     // it's up or down to the right value
     AP.towerInterval = setInterval(AP.adjustTowers, 100);
+  } else if (AP.adjustPantheon()) {
+    // guess there's not much to do here right now, but maybe there will be
+    // in the future
   }
 
   // Record the new maximum number of buildings (which could have changed due
