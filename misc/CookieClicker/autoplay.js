@@ -195,15 +195,10 @@ AP.spiritOfRuinActions = function() {
 
   // If clicking is over, buy back whatever cursors we had
   if (!AP.clickingNeeded()) {
-    // Determine how many to buy at a time
+    // Determine how many to buy at a time, and do so
     num = AP.spiritOfRuinPreviousCursors - Game.Objects.Cursor.amount;
     num = (num >= 100) ? 100 : ((num >= 10) ? 10 : 1);
-
-    // Buy them
-    [oldMode, Game.buyMode] = [Game.buyMode, 1];
-    Game.Objects.Cursor.buy(num);
-    Game.buyMode = oldMode;
-    Game.Objects.Cursor.refresh();
+    AP.buyBuilding('Cursor', num);
 
     // Add a slight delay before buying more
     AP.spiritOfRuinDelayTokens = AP.Interval(1, 3);
@@ -229,10 +224,7 @@ AP.spiritOfRuinActions = function() {
       }
 
       // Buy cursors!
-      [oldMode, Game.buyMode] = [Game.buyMode, 1];
-      Game.Objects.Cursor.buy(100);
-      Game.buyMode = oldMode;
-      Game.Objects.Cursor.refresh();
+      AP.buyBuilding('Cursor', 100);
       AP.spiritOfRuinDelayTokens = AP.Interval(1, 3);
       return action_taken;
 
@@ -241,8 +233,7 @@ AP.spiritOfRuinActions = function() {
       // Sell cursors!
       if (AP.spiritOfRuinPreviousCursors == 0)
         AP.spiritOfRuinPreviousCursors = Game.Objects.Cursor.amount;
-      Game.Objects.Cursor.sell(-1);
-      Game.Objects.Cursor.refresh();
+      AP.sellBuilding('Cursor', -1);
       AP.spiritOfRuinDelayTokens = AP.Interval(4, 6);
       AP.spiritOfRuinDelayBeforeBuying = true;
       return action_taken;
@@ -481,6 +472,22 @@ AP.costToPurchase = function(count, base_price) {
   return cost_factor * base_price;
 }
 
+AP.buyBuilding = function(bldg, num) {
+  [oldMode, Game.buyMode] = [Game.buyMode, 1];
+  Game.Objects[bldg].buy(num);
+  Game.buyMode = oldMode;
+  Game.Objects[bldg].refresh();
+}
+
+AP.sellBuilding = function(bldg, num) { // Use num == -1 to sell all
+  // Unlike .buy(), sell() is more sane; it doesn't look at buyMode to
+  // decide whether to invert the meaning and switch between buying and
+  // selling behind the user's back, so no need to temporarily toggle
+  // Game.buyMode.  Yaay.
+  Game.Objects[bldg].sell(num);
+  Game.Objects[bldg].refresh();
+}
+
 AP.getTruePP = function(item, price) {
   // pp == Projected Payoff, mostly calculated by CookieMonster
   pp = Number.MAX_VALUE;
@@ -699,6 +706,9 @@ AP.handlePurchases = function() {
         if (total_cost < 5*AP.trueCpS && CM.Cache.lastCookies >= total_cost)
           bulk_amount = count;
       }
+      AP.buyBuilding(bestBuy.name, bulk_amount);
+    } else {
+      bestBuy.obj.buy();
     }
 
     // Log what we're doing
@@ -706,16 +716,6 @@ AP.handlePurchases = function() {
       console.log(`Bought ${bulk_amount} ${bestBuy.name}(s) `+
                   `(with PP of ${CM.Disp.Beautify(bestBuy.pp)}) ` +
                   `at ${Date().toString()}`)
-
-    // Make sure we buy bulk_amount
-    var orig = [Game.buyMode, Game.buyBulk];
-    [Game.buyMode, Game.buyBulk] = [1, bulk_amount];
-
-    // Buy it.
-    bestBuy.obj.buy();
-
-    // restore values we temporarily over-wrote
-    [Game.buyMode, Game.buyBulk] = orig;
   }
 
   // Record the new maximum number of buildings (which could have changed due
