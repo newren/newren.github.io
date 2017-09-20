@@ -418,6 +418,43 @@ AP.handleSpellsDuringBuffs = function() {
   }
 }
 
+AP.adjustTowers = function() {
+  action_taken = true;
+
+  if (AP.usage.grimoire != 2)
+    return !action_taken;
+
+  towers = Game.Objects["Wizard tower"];
+  grimoire = towers.minigame;
+
+  // If we buy/sell towers too quickly, that doesn't seem very human like.  We
+  // can sell quickly if magicM is enough bigger than magic, but we need to
+  // slow down when we get close.
+  if (AP.towerInterval) {
+    delay = (grimoire.magicM - Math.floor(grimoire.magic) >= 3) ? 5 : 2;
+    if (Math.random() > 1/delay)
+      return action_taken;
+  }
+
+  // Determine whether we need to buy or sell towers, or if we're all done
+  if (grimoire.magicM == grimoire.magic && towers.getPrice() < 1*AP.trueCpS) {
+    AP.buyBuilding('Wizard tower', 1);
+    return action_taken;
+  } else if (grimoire.magicM > grimoire.magic + 1 && towers.amount > 2) {
+    AP.sellBuilding('Wizard tower', 1);
+    return action_taken;
+  } else if (AP.towerInterval) {
+    // Magic now in the right range; remove the callback
+    clearInterval(AP.towerInterval);
+    AP.towerInterval = undefined;
+    // Don't purchase other buildings immediately after trying to
+    // adjust towers; make sure to wait at least a little bit.
+    AP.timer.lastPurchaseCheck = Date.now() + 2500;
+  }
+
+  return !action_taken;
+}
+
 /*** Figuring out expected time ***/
 
 AP.expectedTimeUntil = function(gcevent) {
@@ -615,7 +652,7 @@ AP.determinePatientBankBuffer = function(item_pp) {
   // Do golden cookies overlap?  Is the Grimoire minigame in play?
   gc_overlap = Game.Upgrades["Get lucky"].bought
   grimoire = Game.Objects["Wizard tower"].minigame &&
-             Game.Objects["Wizard tower"].amount >= 8; // # needed for CBG
+             AP.buildingMax["Wizard tower"] >= 8; // # needed for CBG
 
   // What's our reasonable minimum production before the next Golden Cookie
   // appears?
@@ -678,8 +715,8 @@ AP.handlePurchases = function() {
     return;
   AP.timer.lastPurchaseCheck = Date.now();
 
-  // Don't buy upgrades or buildings while in a clickfest
-  if (AP.clickInterval)
+  // Don't buy upgrades or buildings while in a clickfest or adjusting towers
+  if (AP.clickInterval || AP.towerInterval)
     return;
 
   // Set a small factor to help with building purchase decisions
@@ -734,6 +771,10 @@ AP.handlePurchases = function() {
       console.log(`Bought ${bulk_amount} ${bestBuy.name}(s) `+
                   `(with PP of ${CM.Disp.Beautify(bestBuy.pp)}) ` +
                   `at ${Date().toString()}`)
+  } else if (AP.adjustTowers()) {
+    // One adjustment usually isn't enough; make sure we keep adjusting until
+    // it's up or down to the right value
+    AP.towerInterval = setInterval(AP.adjustTowers, 100);
   }
 
   // Record the new maximum number of buildings (which could have changed due
@@ -1017,6 +1058,7 @@ AP.Init = function() {
   AP.timer.lastPurchaseCheck = Date.now();
   AP.buildingMax = {};
   AP.clickInterval = undefined;
+  AP.towerInterval = undefined;
   AP.logHandOfFateCookie = false;
   AP.lastResets = Game.resets - 1;
 
