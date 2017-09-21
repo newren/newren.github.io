@@ -6,8 +6,8 @@
 //   * Clicks on golden cookies and reindeer (after human-like delay)
 //   * Clicks on the big cookie during ClickFrenzies/DragonFlights
 //     (5 or so times per second, after human like delay)
-//   * Occasionally takes advantage of a couple capabilities from the
-//     Pantheon and Grimoire minigames if conditions are just right
+//   * Tries to take advantage of a couple capabilities from the
+//     Pantheon and Grimoire minigames when conditions are right
 //
 // The mediocre reaction time has a few downsides, which I intend to not fix:
 //   * It often fails to complete chains from golden cookies
@@ -132,7 +132,7 @@ AP.shimmerAct = function() {
 
   // Otherwise, check to see if we want to take advantage of some spell
   // casting
-  else
+  else if (AP.Config.GrimoireSpellcasting)
     AP.handleSpellsDuringBuffs();
 }
 
@@ -928,6 +928,7 @@ AP.ConfigInit = function() {
     BigCookieClicks: 1,
     ShimmerTypes: 1,
     ShimmerClicking: 1,
+    GrimoireSpellcasting: 1,
   };
   AP.ConfigData.GlobalEnable = {
     label: ['Disabled',
@@ -964,6 +965,11 @@ AP.ConfigInit = function() {
             'When they show up',
             'Eh, whenever'],
     desc: 'When to autoclick shimmers (golden/wrath cookies, eggs, reindeer)',
+    };
+  AP.ConfigData.GrimoireSpellcasting = {
+    label: ['Disable',
+            'Enable'],
+    desc: 'Automatically cast spells from the Grimoire minigame',
     };
 }
 
@@ -1003,6 +1009,7 @@ AP.AddMenuPref = function() {
   new_menu.appendChild(listing('BigCookieClicks'));
   new_menu.appendChild(listing('ShimmerTypes'));
   new_menu.appendChild(listing('ShimmerClicking'));
+  new_menu.appendChild(listing('GrimoireSpellcasting'));
 
   l('menu').childNodes[2].insertBefore(new_menu, l('menu').childNodes[2].childNodes[l('menu').childNodes[2].childNodes.length - 1]);
 }
