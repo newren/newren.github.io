@@ -6,8 +6,10 @@
 //   * Clicks on golden cookies and reindeer (after human-like delay)
 //   * Clicks on the big cookie during ClickFrenzies/DragonFlights
 //     (5 or so times per second, after human like delay)
-//   * Tries to take advantage of a couple capabilities from the
-//     Pantheon and Grimoire minigames when conditions are right
+//   * Will cast a few spells from the Grimoire minigame when conditions
+//     are right
+//   * Moves Cyclius into and out of the lower value slots in the Pantheon
+//     minigame, if those slots are free.  [Not yet configurable]
 //
 // The mediocre reaction time has a few downsides, which I intend to not fix:
 //   * It often fails to complete chains from golden cookies
@@ -28,7 +30,8 @@
 //     * The golden switch
 //   * It won't interact with Krumblor (the dragon)
 //   * It won't select most spirits for the Pantheon minigame
-//   * It won't cast most the spells from the Grimoire minigame
+//   * It won't cast most spells from the Grimoire minigame
+//   * It won't spend sugar lumps for anything
 //   * It only collects achievements for things related to normal operations
 //     (buying buildings, clicking on golden cookies, maybe an occasional
 //      spell); special achievements (renaming the bakery, dunking the big
