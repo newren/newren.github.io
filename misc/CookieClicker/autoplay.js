@@ -471,7 +471,7 @@ AP.adjustTowers = function() {
   // can sell quickly if magicM is enough bigger than magic, but we need to
   // slow down when we get close.
   if (AP.towerInterval) {
-    delay = (grimoire.magicM - Math.floor(grimoire.magic) >= 3) ? 5 : 2;
+    delay = (grimoire.magicM - Math.floor(grimoire.magic) >= 3) ? 3 : 1.5;
     if (Math.random() > 1/delay)
       return action_taken;
   }
@@ -814,7 +814,7 @@ AP.handlePurchases = function() {
   } else if (AP.adjustTowers()) {
     // One adjustment usually isn't enough; make sure we keep adjusting until
     // it's up or down to the right value
-    AP.towerInterval = setInterval(AP.adjustTowers, 100);
+    AP.towerInterval = setInterval(AP.adjustTowers, 200);
   } else if (AP.adjustPantheon()) {
     // guess there's not much to do here right now, but maybe there will be
     // in the future
