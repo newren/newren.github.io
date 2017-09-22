@@ -467,6 +467,15 @@ AP.adjustTowers = function() {
   if (AP.usage.grimoire != 2)
     return !action_taken;
 
+  if (AP.clickingNeeded()) {
+    // If a GC comes and a click frenzy occurs while we're adjusting towers,
+    // just bail and do the click frenzy.  We can get back to the towers
+    // later.
+    clearInterval(AP.towerInterval);
+    AP.towerInterval = undefined;
+    return !action_taken;
+  }
+
   towers = Game.Objects["Wizard tower"];
   grimoire = towers.minigame;
 
@@ -474,7 +483,7 @@ AP.adjustTowers = function() {
   // can sell quickly if magicM is enough bigger than magic, but we need to
   // slow down when we get close.
   if (AP.towerInterval) {
-    delay = (grimoire.magicM - Math.floor(grimoire.magic) >= 3) ? 3 : 1.5;
+    delay = (grimoire.magicM - Math.floor(grimoire.magic) >= 3) ? 3 : 1;
     if (Math.random() > 1/delay)
       return action_taken;
   }
@@ -484,7 +493,10 @@ AP.adjustTowers = function() {
     AP.buyBuilding('Wizard tower', 1);
     return action_taken;
   } else if (grimoire.magicM > grimoire.magic + 1 && towers.amount > 2) {
-    AP.sellBuilding('Wizard tower', 1);
+    amount = 1;
+    if (grimoire.magicM > grimoire.magic + 11 && towers.amount > 12)
+      amount = 10;
+    AP.sellBuilding('Wizard tower', amount);
     return action_taken;
   } else if (AP.towerInterval) {
     // Magic now in the right range; remove the callback
