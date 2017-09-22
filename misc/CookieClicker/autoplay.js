@@ -598,10 +598,34 @@ AP.sellBuilding = function(bldg, num) { // Use num == -1 to sell all
   Game.Objects[bldg].refresh();
 }
 
+AP.getSpontaneousEdificeBonus = function(item, price) {
+  if (!AP.Config.GrimoireSpellcasting)
+    return 0;
+
+  M = 0;
+  sum = 0;
+  for (var bldg in Game.Objects)
+    if (bldg != item && Game.Objects[bldg].amount < 400) {
+      sum += Game.Objects[bldg].getPrice();
+      M += 1;
+    }
+  if (Game.Objects[item].amount >= 400) {
+    if (M == 0)
+      return 0
+    else
+      se_bonus = - 0.00000043485 * price;
+  } else if (Game.Objects[item].amount < 399) {
+    se_bonus = (0.0000425/(M+1) - 0.00000043485) * price;
+  } else { // Game.Objects[item].amount == 399
+    se_bonus = 0.00028333*(1/M - 1/(M+1)) * sum
+               - (0.00028333/(M+1) + 0.00000043485) * price;
+  }
+  return se_bonus;
+}
+
 AP.getTruePP = function(item, price) {
   // pp == Projected Payoff, mostly calculated by CookieMonster
   pp = Number.MAX_VALUE;
-  cps = AP.trueCpS;
   if (CM.Cache.Upgrades[item]) {
     // Do a special computation of projected payoff for particular items that
     // CookieMonster simply returns Infinity for.
@@ -609,19 +633,21 @@ AP.getTruePP = function(item, price) {
     if (special_factor) {
       if (!AP.Options.clickSomeShimmers())
         special_factor = Math.max(special_factor, 0.5);
-      pp = Game.Upgrades[item].getPrice() / (special_factor * cps);
+      pp = Game.Upgrades[item].getPrice() / (special_factor * AP.trueCpS);
     } else {
       pp = CM.Cache.Upgrades[item].pp * AP.currentBuff;
     }
   } else if (CM.Cache.Objects[item]) {
+    normal_bonus = CM.Cache.Objects[item].bonus / AP.currentBuff;
     if (AP.Options.clickSomeShimmers()) {
-      bsf = AP.building_special_factor;
-      bs_pp = Math.max(0, Game.Objects[item].getPrice()-Game.cookies) / cps +
-              Game.Objects[item].getPrice() / (bsf * cps)
-      pp = Math.min(CM.Cache.Objects[item].pp * AP.currentBuff, bs_pp);
+      bs_bonus = AP.building_special_factor * AP.trueCpS;
     } else {
-      pp = CM.Cache.Objects[item].pp;
+      bs_bonus = 0;
     }
+    se_bonus = AP.getSpontaneousEdificeBonus(item, price);
+    combined_bonus = normal_bonus + bs_bonus + se_bonus;
+    pp = (Math.max(price - Game.cookies, 0) / Game.cookiesPs) +
+         (price / combined_bonus);
   }
 
   // Return what we found
@@ -635,9 +661,8 @@ AP.getCheapItem = function(item, price) {
   // sit around forever, and once buildings become cheap enough it's cool
   // to just buy more.
   pp = Number.MAX_VALUE;
-  cps = AP.trueCpS;
-  if (price < 1*cps)
-    return 3.1415926535897932384626433832795; // arbitrary small number
+  if (price < 1*AP.trueCpS)
+    pp = 3.1415926535897932384626433832795; // arbitrary small number
 
   // Return what we found
   return pp;
