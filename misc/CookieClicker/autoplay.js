@@ -637,6 +637,7 @@ AP.getTruePP = function(item, price) {
     } else {
       pp = CM.Cache.Upgrades[item].pp * AP.currentBuff;
     }
+    bonus_ratios = [];
   } else if (CM.Cache.Objects[item]) {
     normal_bonus = CM.Cache.Objects[item].bonus / AP.currentBuff;
     if (AP.Options.clickSomeShimmers()) {
@@ -646,12 +647,14 @@ AP.getTruePP = function(item, price) {
     }
     se_bonus = AP.getSpontaneousEdificeBonus(item, price);
     combined_bonus = normal_bonus + bs_bonus + se_bonus;
+    biggest = Math.max(normal_bonus, bs_bonus, se_bonus);
+    bonus_ratios = [normal_bonus/biggest, bs_bonus/biggest, se_bonus/biggest];
     pp = (Math.max(price - Game.cookies, 0) / Game.cookiesPs) +
          (price / combined_bonus);
   }
 
   // Return what we found
-  return pp;
+  return {pp: pp, ratios: bonus_ratios};
 }
 
 AP.getCheapItem = function(item, price) {
@@ -665,7 +668,7 @@ AP.getCheapItem = function(item, price) {
     pp = 3.1415926535897932384626433832795; // arbitrary small number
 
   // Return what we found
-  return pp;
+  return {pp: pp, ratios: []};
 }
 
 AP.itemLimitsForMinigames = function(item, price) {
@@ -701,10 +704,11 @@ AP.determineBestBuy = function(metric) {
       if (Game.Upgrades[item].unlocked) {
         if (AP.upgradesToIgnore.indexOf(item) === -1) {
           price = Game.Upgrades[item].getPrice();
-          pp = metric(item, price);
-          if (pp < lowestPP) {
-            lowestPP = pp;
-            best = {name: item, price: price, pp: pp, obj: Game.Upgrades[item]}
+          ppinfo = metric(item, price);
+          if (ppinfo.pp < lowestPP) {
+            lowestPP = ppinfo.pp;
+            best = {name: item, price: price, pp: ppinfo.pp, ratios: [],
+                    obj: Game.Upgrades[item]}
           } //else { console.log(`Skipping ${item}; not better PP`) }
         } //else { console.log(`Skipping ${item}; in ignore list`) }
       } //else { console.log(`Skipping ${item}; not unlocked`) }
@@ -713,11 +717,12 @@ AP.determineBestBuy = function(metric) {
   if (AP.Options.purchaseBuildings()) {
     for (item in CM.Cache.Objects) {
       price = Game.Objects[item].getPrice();
-      pp = metric(item, price);
-      pp = Math.max(pp, AP.itemLimitsForMinigames(item, price));
-      if (pp < lowestPP) {
-        lowestPP = pp;
-        best = {name: item, price: price, pp: pp, obj: Game.Objects[item]}
+      ppinfo = metric(item, price);
+      ppinfo.pp = Math.max(ppinfo.pp, AP.itemLimitsForMinigames(item, price));
+      if (ppinfo.pp < lowestPP) {
+        lowestPP = ppinfo.pp;
+        best = {name: item, price: price, pp: ppinfo.pp, ratios: ppinfo.ratios,
+                obj: Game.Objects[item]}
       } //else { console.log(`Skipping ${item}; not better PP`) }
     }
   }
@@ -847,10 +852,16 @@ AP.handlePurchases = function() {
     }
 
     // Log what we're doing
-    if (log_purchase_for_user)
+    if (log_purchase_for_user) {
+      ratio_string = ''
+      if (bestBuy.ratios.length) {
+        formatted_ratios = bestBuy.ratios.map(x=>{return x.toExponential(2)});
+        ratio_string = ` and ratios [${formatted_ratios.join(', ')}]`;
+      }
       console.log(`Bought ${bulk_amount} ${bestBuy.name}(s) `+
-                  `(with PP of ${CM.Disp.Beautify(bestBuy.pp)}) ` +
+                  `(with PP of ${Beautify(bestBuy.pp)}${ratio_string}) ` +
                   `at ${Date().toString()}`)
+    }
   } else if (AP.adjustTowers()) {
     // One adjustment usually isn't enough; make sure we keep adjusting until
     // it's up or down to the right value
