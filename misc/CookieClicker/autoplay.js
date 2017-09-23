@@ -641,11 +641,11 @@ AP.getTruePP = function(item, price) {
   } else if (CM.Cache.Objects[item]) {
     normal_bonus = CM.Cache.Objects[item].bonus / AP.currentBuff;
     if (AP.Options.clickSomeShimmers()) {
-      bs_bonus = AP.building_special_factor * AP.trueCpS;
+      bs_bonus = AP.building_special_factor * AP.trueCpS / 10;
     } else {
       bs_bonus = 0;
     }
-    se_bonus = AP.getSpontaneousEdificeBonus(item, price);
+    se_bonus = AP.getSpontaneousEdificeBonus(item, price) / 10;
     combined_bonus = normal_bonus + bs_bonus + se_bonus;
     biggest = Math.max(normal_bonus, bs_bonus, se_bonus);
     bonus_ratios = [normal_bonus/biggest, bs_bonus/biggest, se_bonus/biggest];
