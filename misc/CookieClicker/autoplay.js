@@ -907,7 +907,7 @@ AP.checkUnusualUsageStrategies = function() {
   // First, handling of the spirit of ruin
   cursor_amount = Game.Objects.Cursor.amount
   if (Game.hasGod && Game.hasGod("ruin") && Game.Objects.Mine.amount >= 5) {
-    if (Game.Objects.Cursor.getPrice() > 1.15*AP.trueCpS && cursor_amount > 100)
+    if (Game.Objects.Cursor.getPrice() > 1.5*AP.trueCpS && cursor_amount > 100)
       AP.usage.spiritOfRuin = 0;
     if (cursor_amount == 0 && AP.buildingMax.Cursor > 100)
       AP.usage.spiritOfRuin = 2;
@@ -921,7 +921,7 @@ AP.checkUnusualUsageStrategies = function() {
     AP.buildingMax["Wizard tower"] = tower_amount
   grimoire = Game.Objects["Wizard tower"].minigame;
   if (grimoire && Game.Objects.Portal.amount >= 5) {
-    if (Game.Objects["Wizard tower"].getPrice() > 1.15*AP.trueCpS &&
+    if (Game.Objects["Wizard tower"].getPrice() > 1.5*AP.trueCpS &&
         tower_amount > 55)
       AP.usage.grimoire = 0;
     if (tower_amount < AP.buildingMax["Wizard tower"] - 1)
