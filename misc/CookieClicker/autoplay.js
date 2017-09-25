@@ -647,10 +647,10 @@ AP.getTruePP = function(item, price) {
     }
     se_bonus = AP.getSpontaneousEdificeBonus(item, price) / 10;
     combined_bonus = normal_bonus + bs_bonus + se_bonus;
-    biggest = Math.max(normal_bonus, bs_bonus, se_bonus);
+    biggest = Math.max(normal_bonus, bs_bonus, Math.abs(se_bonus));
     bonus_ratios = [normal_bonus/biggest, bs_bonus/biggest, se_bonus/biggest];
     pp = (Math.max(price - Game.cookies, 0) / Game.cookiesPs) +
-         (price / combined_bonus);
+          (price / Math.max(0, combined_bonus));
   }
 
   // Return what we found
