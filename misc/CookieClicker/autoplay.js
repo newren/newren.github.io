@@ -481,9 +481,11 @@ AP.adjustTowers = function() {
 
   // If we buy/sell towers too quickly, that doesn't seem very human like.  We
   // can sell quickly if magicM is enough bigger than magic, but we need to
-  // slow down when we get close.
+  // slow down when we get close.  When buying, we need to go slow to avoid
+  // buying too many.
   if (AP.towerInterval) {
-    delay = (grimoire.magicM - Math.floor(grimoire.magic) >= 3) ? 3 : 1;
+    delay = (grimoire.magicM - Math.floor(grimoire.magic) >= 3 ||
+             grimoire.magicM == grimoire.magic) ? 3 : 1;
     if (Math.random() > 1/delay)
       return action_taken;
   }
