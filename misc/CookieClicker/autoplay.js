@@ -280,10 +280,10 @@ AP.adjustPantheon = function() {
     desiredSlot = false;
     if (value <= 1 && slot1available && slot2available)
       desiredSlot = 2
-    else if (value % 6 <= 2 && slot1available)
-      desiredSlot = 2
     else if (value <= 5 && slot2available)
       desiredSlot = 3
+    else if (value % 6 <= 2 && slot1available)
+      desiredSlot = 2
 
     // Exit if we don't have him and don't want him.
     if (!desiredSlot && !Game.hasGod('ages'))
