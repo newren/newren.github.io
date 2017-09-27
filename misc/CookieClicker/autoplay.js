@@ -381,14 +381,72 @@ AP.cbg_better_than_fhof = function(just_determining_bank_buffer) {
   return 1.83 * ratio_of_desired_buffer > ruin_mult * cursor_mult * duration;
 }
 
-AP.conjureBakedGoods = function() {
+AP.conjureBakedGoods = function(original_buff) {
+  // If there's a magic inept (a backfired diminish ineptitude, or the buff
+  // has ended, or we've used up all our magic, then exit.
+  AP.recomputeBuffs();
+  grimoire = Game.Objects["Wizard tower"].minigame
+  if (Game.buffs["Magic inept"] ||
+      AP.currentBuff < original_buff ||
+      grimoire.magic < 4) {
+    clearInterval(AP.interval.grimoire);
+    AP.interval.grimoire = undefined;
+    return;
+  }
+
+  // If we hit a click frenzy while waiting to cast CBG (unlikely, but we're
+  // checking just to be sure), then pursue the click frenzy in preference.
+  // A human wouldn't be able to do both, so we have to pick one.
+  if (AP.clickingNeeded())
+    return;
+
+  // Sell towers until we have the right amount
+  if (AP.usage.grimoire == 2 && grimoire.magic < grimoire.magicM) {
+    mf = Math.floor(grimoire.magic);
+    factor = (Game.buffs["Magic adept"] ? .4 : .2);
+    sell_until_exact = (Math.floor(factor*mf) < Math.floor(factor*(mf+1)))
+    if (AP.adjustTowers(sell_until_exact))
+      return; // Some towers sold
+  }
+
+  // Add a simple delay between tower selling and casting CBG.  Probably could
+  // be done better with delay tokens than random numbers, but whatever...
+  if (AP.usage.grimoire == 2 && Math.random() < 2/3)
+    return; // Wait until interval firing this function fires again
+
+  // We need to cast diminish ineptitude first (unless we already did this
+  // on a previous round through this function, or there was one leftover from
+  // a long time ago).
+  if (!Game.buffs["Magic adept"] ||
+      Game.buffs["Magic adept"].time < 30*Game.fps) {
+    grimoire.castSpell(grimoire.spells["diminish ineptitude"]);
+    if (!Game.buffs["Magic adept"]) {
+      console.log(`Diminish ineptitude failed; not trying to CBG ` +
+                  `at ${Date().toString()}`);
+      return;
+    }
+  }
+
+  // If not selling wizard towers, we want to wait until the buff is nearly
+  // over, since we'll only get one shot.
+  if (AP.usage.grimoire < 2) {
+    time_left = Math.min(AP.currentBuffTimeLeft,
+                         Game.buffs["Magic adept"].time/Game.fps);
+    if (time_left > 20)
+      return;
+    if (time_left > 5 && Math.random() > 1/75)
+      return;
+  }
+
+  // Log info about our CBG casting.
   desired_bank_buffer = 30 * 60 * Game.cookiesPs / 0.15;
   percentage_of_wanted = Math.min(100, 100 * Game.cookies / desired_bank_buffer);
-
   console.log(`Cast Conjure Baked Goods ` +
               `during x${AP.currentBuff} buff ` +
               `with ${percentage_of_wanted.toFixed(0)}% of bank ` +
               `at ${Date().toString()}`)
+
+  // Finally cast the spell
   cbg = Game.Objects["Wizard tower"].minigame.spells["conjure baked goods"];
   Game.Objects["Wizard tower"].minigame.castSpell(cbg);
 }
@@ -416,39 +474,21 @@ AP.handleSpellsDuringBuffs = function() {
 
   if (AP.cbg_better_than_fhof(0)) {
     // Do we have enough to cast diminish ineptitude and conjure baked goods?
-    // FIXME: Add strategy to use when selling wizard towers; it could be
-    //        even faster and should be able to do it with just 8 magic.
-    if (grimoire.magicM < 13)
+    if (AP.usage.grimoire == 2) {
+      if (grimoire.magic < 11)
+        return;
+    } else if (grimoire.magicM < 13)
       return;
-    if (grimoire.magicM == 13 &&
+    else if (grimoire.magicM == 13 &&
         (grimoire.magic != 13 || AP.currentBuffTimeLeft < 72))
       return;
-    if (grimoire.magicM >= 14 &&
+    else if (grimoire.magicM >= 14 &&
         grimoire.magic < Math.floor(0.6 * grimoire.magicM) + 7)
       return;
 
-    // First, cast diminish ineptitude.  Well, unless there's already a
-    // leftover diminish ineptitude from before.
-    time_left = AP.currentBuffTimeLeft;
-    if (!Game.buffs["Magic adept"]) {
-      grimoire.castSpell(grimoire.spells["diminish ineptitude"])
-    } else {
-      time_left = Math.max(time_left, Game.buffs["Magic adept"].time/Game.fps);
-    }
-
-    // If it failed, exit with a message
-    if (!Game.buffs["Magic adept"]) {
-      console.log(`Diminish ineptitude failed; not trying to CBG at ${Date().toString()}`);
-      return;
-    }
-
-    // Next, setup a timeout to cast Conjure Baked Goods
-    maxWait = 1000*(time_left-5);
-    minWait = 1000*Math.max(.5, time_left-10);
-    if (grimoire.magic < 14)
-      minWait = 66000;
-    setTimeout(AP.conjureBakedGoods, AP.Interval(minWait, maxWait));
-
+    buffWas = AP.currentBuff;
+    callback = function() {AP.conjureBakedGoods(buffWas)};
+    AP.interval.grimoire = setInterval(callback, 200);
   } else {
     // Do we have enough to cast hand of fate?
     if (grimoire.magic < Math.floor(0.6 * grimoire.magicM) + 10)
@@ -461,8 +501,9 @@ AP.handleSpellsDuringBuffs = function() {
   }
 }
 
-AP.adjustTowers = function() {
+AP.adjustTowers = function(sell_until_equal) {
   action_taken = true;
+  difference_allowed = (sell_until_equal ? 0 : 1);
 
   if (AP.usage.grimoire != 2)
     return !action_taken;
@@ -494,7 +535,8 @@ AP.adjustTowers = function() {
   if (grimoire.magicM == grimoire.magic && towers.getPrice() < 1*AP.trueCpS) {
     AP.buyBuilding('Wizard tower', 1);
     return action_taken;
-  } else if (grimoire.magicM > grimoire.magic + 1 && towers.amount > 2) {
+  } else if (grimoire.magicM > grimoire.magic + difference_allowed &&
+             towers.amount > 2) {
     amount = 1;
     if (grimoire.magicM > grimoire.magic + 11 && towers.amount > 12)
       amount = 10;
@@ -1172,6 +1214,7 @@ AP.Init = function() {
   AP.buildingMax = {};
   AP.clickInterval = undefined;
   AP.towerInterval = undefined;
+  AP.interval = {}
   AP.logHandOfFateCookie = false;
   AP.lastResets = Game.resets - 1;
 
