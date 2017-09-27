@@ -587,6 +587,11 @@ AP.buyBuilding = function(bldg, num) {
   Game.Objects[bldg].buy(num);
   Game.buyMode = oldMode;
   Game.Objects[bldg].refresh();
+
+  if (bldg == 'Cursor')
+    AP.ruinCursors = Math.max(AP.ruinCursors, Game.Objects[bldg].amount);
+  else if (bldg == "Wizard tower")
+    AP.grimoireTowers = Math.max(AP.grimoireTowers, Game.Objects[bldg].amount);
 }
 
 AP.sellBuilding = function(bldg, num) { // Use num == -1 to sell all
@@ -907,10 +912,13 @@ AP.checkUnusualUsageStrategies = function() {
   // First, handling of the spirit of ruin
   cursor_amount = Game.Objects.Cursor.amount
   if (Game.hasGod && Game.hasGod("ruin") && Game.Objects.Mine.amount >= 5) {
-    if (Game.Objects.Cursor.getPrice() > 1.5*AP.trueCpS && cursor_amount > 100)
+    if (cursor_amount > 100 && cursor_amount > AP.ruinCursors) {
       AP.usage.spiritOfRuin = 0;
-    if (cursor_amount == 0 && AP.buildingMax.Cursor > 100)
+    }
+    if (cursor_amount == 0 && AP.buildingMax.Cursor > 100) {
       AP.usage.spiritOfRuin = 2;
+      AP.ruinCursors = 0;
+    }
   }
 
   // Second, handling grimoire
@@ -921,11 +929,13 @@ AP.checkUnusualUsageStrategies = function() {
     AP.buildingMax["Wizard tower"] = tower_amount
   grimoire = Game.Objects["Wizard tower"].minigame;
   if (grimoire && Game.Objects.Portal.amount >= 5) {
-    if (Game.Objects["Wizard tower"].getPrice() > 1.5*AP.trueCpS &&
-        tower_amount > 55)
+    if (tower_amount > 55 && tower_amount > AP.grimoireTowers) {
       AP.usage.grimoire = 0;
-    if (tower_amount < AP.buildingMax["Wizard tower"] - 1)
+    }
+    if (tower_amount < AP.buildingMax["Wizard tower"] - 1) {
       AP.usage.grimoire = 2;
+      AP.grimoireTowers = tower_amount;
+    }
   }
 }
 
@@ -1166,6 +1176,8 @@ AP.Init = function() {
   AP.usage = {};
   AP.usage.spiritOfRuin = (Game.resets > 0 ? 1 : 0);
   AP.usage.grimoire =     (Game.resets > 0 ? 1 : 0);
+  AP.ruinCursors = 0;
+  AP.grimoireTowers = 0;
 
   AP.spiritOfRuinDelayTokens = 0;
   AP.spiritOfRuinDelayBeforeBuying = false;
