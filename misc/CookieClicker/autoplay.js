@@ -378,7 +378,8 @@ AP.cbg_better_than_fhof = function(just_determining_bank_buffer) {
   }
 
   // Let our caller know if conjure baked goods is better than hand of fate.
-  return 1.83 * ratio_of_desired_buffer > ruin_mult * cursor_mult * duration;
+  factor = (AP.usage.grimoire == 2 ? 2.5*1.83 : 1.83);
+  return factor * ratio_of_desired_buffer > ruin_mult * cursor_mult * duration;
 }
 
 AP.conjureBakedGoods = function(original_buff) {
