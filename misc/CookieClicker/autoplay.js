@@ -1254,6 +1254,7 @@ AP.Init = function() {
       "Communal brainsweep",
       "Elder Pact",
       "Elder Covenant",
+      "Revoke Elder Covenant",
       "Elder Pledge",
       "Festive biscuit",
       "Ghostly biscuit",
