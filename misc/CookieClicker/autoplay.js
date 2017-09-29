@@ -422,7 +422,8 @@ AP.handleSpellAdjustments = function(original_buff, min_magic_needed, factor) {
 
 AP.conjureBakedGoods = function(original_buff) {
   factor = (Game.buffs["Magic adept"] ? .4 : .2);
-  if (AP.handleSpellAdjustments(original_buff, 4, factor))
+  min_magic = (AP.usage.grimoire == 2 ? 4 : Math.floor(2 + .4*grimoire.magicM));
+  if (AP.handleSpellAdjustments(original_buff, min_magic, factor))
     return;
 
   // We need to cast diminish ineptitude first (unless we already did this
