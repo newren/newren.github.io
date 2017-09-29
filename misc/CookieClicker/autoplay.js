@@ -382,38 +382,48 @@ AP.cbg_better_than_fhof = function(just_determining_bank_buffer) {
   return factor * ratio_of_desired_buffer > ruin_mult * cursor_mult * duration;
 }
 
-AP.conjureBakedGoods = function(original_buff) {
+AP.handleSpellAdjustments = function(original_buff, min_magic_needed, factor) {
+  action_taken = true;
+
   // If there's a magic inept (a backfired diminish ineptitude, or the buff
   // has ended, or we've used up all our magic, then exit.
   AP.recomputeBuffs();
   grimoire = Game.Objects["Wizard tower"].minigame
   if (Game.buffs["Magic inept"] ||
       AP.currentBuff < original_buff ||
-      grimoire.magic < 4) {
+      grimoire.magic < min_magic_needed) {
     clearInterval(AP.interval.grimoire);
     AP.interval.grimoire = undefined;
-    return;
+    return action_taken;
   }
 
   // If we hit a click frenzy while waiting to cast CBG (unlikely, but we're
   // checking just to be sure), then pursue the click frenzy in preference.
   // A human wouldn't be able to do both, so we have to pick one.
   if (AP.clickingNeeded())
-    return;
+    return action_taken;
 
   // Sell towers until we have the right amount
   if (AP.usage.grimoire == 2 && grimoire.magic < grimoire.magicM) {
     mf = Math.floor(grimoire.magic);
-    factor = (Game.buffs["Magic adept"] ? .4 : .2);
     sell_until_exact = (Math.floor(factor*mf) < Math.floor(factor*(mf+1)))
     if (AP.adjustTowers(sell_until_exact))
-      return; // Some towers sold
+      return action_taken; // Some towers sold
   }
 
-  // Add a simple delay between tower selling and casting CBG.  Probably could
-  // be done better with delay tokens than random numbers, but whatever...
+  // Add a simple delay between tower selling and casting whatever spell.
+  // Probably could be done better with delay tokens than random numbers,
+  // but whatever...
   if (AP.usage.grimoire == 2 && Math.random() < 2/3)
-    return; // Wait until interval firing this function fires again
+    return action_taken; // Wait until interval firing this function fires again
+
+  return !action_taken;
+}
+
+AP.conjureBakedGoods = function(original_buff) {
+  factor = (Game.buffs["Magic adept"] ? .4 : .2);
+  if (AP.handleSpellAdjustments(original_buff, 4, factor))
+    return;
 
   // We need to cast diminish ineptitude first (unless we already did this
   // on a previous round through this function, or there was one leftover from
@@ -421,15 +431,18 @@ AP.conjureBakedGoods = function(original_buff) {
   if (!Game.buffs["Magic adept"] ||
       Game.buffs["Magic adept"].time < 30*Game.fps) {
     grimoire.castSpell(grimoire.spells["diminish ineptitude"]);
-    if (!Game.buffs["Magic adept"]) {
+    if (!Game.buffs["Magic adept"])
       console.log(`Diminish ineptitude failed; not trying to CBG ` +
                   `at ${Date().toString()}`);
-      return;
-    }
+
+    // Don't immediately cast CBG; wait until next interval loop in order
+    // to have a more human-like pause between the two spells.
+    return;
   }
 
   // If not selling wizard towers, we want to wait until the buff is nearly
-  // over, since we'll only get one shot.
+  // over, since we'll only get one shot and would like to let magic refill
+  // when we're further from being fully depleted.
   if (AP.usage.grimoire < 2) {
     time_left = Math.min(AP.currentBuffTimeLeft,
                          Game.buffs["Magic adept"].time/Game.fps);
