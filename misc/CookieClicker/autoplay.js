@@ -382,7 +382,8 @@ AP.cbg_better_than_fhof = function(just_determining_bank_buffer) {
   return factor * ratio_of_desired_buffer > ruin_mult * cursor_mult * duration;
 }
 
-AP.handleSpellAdjustments = function(original_buff, min_magic_needed, factor) {
+AP.handleSpellAdjustments = function(original_buff, min_buff_time_overlap,
+                                     min_magic_needed, factor) {
   action_taken = true;
 
   // If there's a magic inept (a backfired diminish ineptitude, or the buff
@@ -391,6 +392,7 @@ AP.handleSpellAdjustments = function(original_buff, min_magic_needed, factor) {
   grimoire = Game.Objects["Wizard tower"].minigame
   if (Game.buffs["Magic inept"] ||
       AP.currentBuff < original_buff ||
+      AP.currentBuffTimeLeft < min_buff_time_overlap ||
       grimoire.magic < min_magic_needed) {
     clearInterval(AP.interval.grimoire);
     AP.interval.grimoire = undefined;
@@ -421,9 +423,11 @@ AP.handleSpellAdjustments = function(original_buff, min_magic_needed, factor) {
 }
 
 AP.conjureBakedGoods = function(original_buff) {
+  grimoire = Game.Objects["Wizard tower"].minigame;
+  min_overlap = 8;
   factor = (Game.buffs["Magic adept"] ? .4 : .2);
   min_magic = (AP.usage.grimoire == 2 ? 4 : Math.floor(2 + .4*grimoire.magicM));
-  if (AP.handleSpellAdjustments(original_buff, min_magic, factor))
+  if (AP.handleSpellAdjustments(original_buff, min_overlap, min_magic, factor))
     return;
 
   // We need to cast diminish ineptitude first (unless we already did this
@@ -466,6 +470,19 @@ AP.conjureBakedGoods = function(original_buff) {
   Game.Objects["Wizard tower"].minigame.castSpell(cbg);
 }
 
+AP.forceHandOfFate = function(original_buff) {
+  grimoire = Game.Objects["Wizard tower"].minigame;
+  min_overlap = 25; /* Includes waiting for GC to appear & time to click it */
+  min_magic = (AP.usage.grimoire == 2 ? 23 : Math.floor(10+.6*grimoire.magicM));
+  if (AP.handleSpellAdjustments(original_buff, min_overlap, min_magic, .6))
+    return;
+
+  // Cast the hand of fate, and trigger a timeout to act on it
+  grimoire.castSpell(grimoire.spells["hand of fate"])
+  AP.logHandOfFateCookie = true;
+  setTimeout(AP.shimmerAct, AP.Interval(3000, 4000))
+}
+
 AP.handleSpellsDuringBuffs = function() {
   // Exit early if we can't cast spells
   grimoire = Game.Objects["Wizard tower"].minigame
@@ -481,8 +498,6 @@ AP.handleSpellsDuringBuffs = function() {
   if (AP.currentNumBuffs < 1)
     return;
   if (Game.Has("Get lucky") && AP.currentNumBuffs < 2)
-    return;
-  if (AP.currentBuffTimeLeft < Math.PI+2*Math.E) // *shrug*
     return;
   if (Game.buffs["Magic inept"])
     return;
@@ -505,14 +520,9 @@ AP.handleSpellsDuringBuffs = function() {
     callback = function() {AP.conjureBakedGoods(buffWas)};
     AP.interval.grimoire = setInterval(callback, 200);
   } else {
-    // Do we have enough to cast hand of fate?
-    if (grimoire.magic < Math.floor(0.6 * grimoire.magicM) + 10)
-      return;
-
-    // Cast the hand of fate, and trigger a timeout to act on it
-    grimoire.castSpell(grimoire.spells["hand of fate"])
-    AP.logHandOfFateCookie = true;
-    setTimeout(AP.shimmerAct, AP.Interval(3000, 4000))
+    buffWas = AP.currentBuff;
+    callback = function() {AP.forceHandOfFate(buffWas)};
+    AP.interval.grimoire = setInterval(callback, 200);
   }
 }
 
