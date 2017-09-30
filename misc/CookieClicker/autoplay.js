@@ -144,12 +144,26 @@ AP.popOne = function() {
     Game.shimmers.some(function(shimmer) {
       if (shimmer.type !== 'golden' || shimmer.wrath === 0 ||
           AP.Config.ShimmerTypes == 2) {  // FIXME, Maybe not the unlucky wraths from Force Hand of Fate?
+
+        // Move the mouse to the right position, then pop the shimmer
+        r = shimmer.l.getBoundingClientRect();
+        var [origx, origy] = [Game.mouseX, Game.mouseY];
+        [Game.mouseX, Game.mouseY] = [r.left + r.width/2, r.top + r.height/2];
         shimmer.pop();
+        [Game.mouseX, Game.mouseY] = [origx, origy];
+
+        // Record the last pop time, so we don't pop too frequently like a
+        // machine
         AP.timer.lastPop = Date.now();
+
+        // Try to handle chain cookies, for which we won't get future
+        // notifications
         var [minw, maxw] = [1000, 2000];
         if (Game.shimmerTypes.golden.last === 'chain cookie')
           [minw, maxw] = [4500, 5750];
         setTimeout(AP.shimmerAct, AP.Interval(minw, maxw));
+
+        // Log results if this cookie was from a hand of fate
         if (AP.logHandOfFateCookie) {
           AP.logHandOfFateCookie = false;
           console.log(`Hand of Fate resulted in ` +
