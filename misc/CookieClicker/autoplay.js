@@ -884,7 +884,8 @@ AP.determineBankBuffer = function(item_pp) {
 AP.handlePurchases = function() {
   // Don't run this function too often, even if stats are updated more
   // frequently (see CM.Config.UpStats and CM.ConfigData.UpStats)
-  if (Date.now() - AP.timer.lastPurchaseCheck < 5000)
+  if (Date.now() - AP.timer.lastPurchaseCheck < 5000 ||
+      Date.now() - AP.timer.lastPop < 10000)
     return;
   AP.timer.lastPurchaseCheck = Date.now();
 
