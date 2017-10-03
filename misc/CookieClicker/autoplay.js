@@ -1103,13 +1103,13 @@ AP.ConfigInit = function() {
     label: ["I'll click my own shimmers",
             'Not them wrath cookies!',
             'Click all the things!'],
-    desc: 'Shimmer types (golden/wrath cookies, eggs, reindeer) to autoclick',
+    desc: 'Shimmer types (golden/wrath cookies, reindeer) to autoclick',
     };
   AP.ConfigData.ShimmerClicking = {
     label: ['Never',
             'When they show up',
             'Eh, whenever'],
-    desc: 'When to autoclick shimmers (golden/wrath cookies, eggs, reindeer)',
+    desc: 'When to autoclick shimmers (golden/wrath cookies, reindeer)',
     };
   AP.ConfigData.GrimoireSpellcasting = {
     label: ['Disable',
