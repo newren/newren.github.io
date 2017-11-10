@@ -720,7 +720,7 @@ AP.getTruePP = function(item, price) {
     special_factor = AP.specialPPfactor[item]
     if (special_factor) {
       if (!AP.Options.clickSomeShimmers())
-        special_factor = Math.max(special_factor, 0.5);
+        special_factor = Math.min(special_factor, 0.5);
       pp = Game.Upgrades[item].getPrice() / (special_factor * AP.trueCpS);
     } else {
       pp = CM.Cache.Upgrades[item].pp * AP.currentBuff;
