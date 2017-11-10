@@ -485,6 +485,11 @@ AP.conjureBakedGoods = function(original_buff) {
 }
 
 AP.forceHandOfFate = function(original_buff) {
+  // Avoid buying (or adjusting towers -- especially selling) when about to
+  // cast forceHandOfFate
+  AP.timer.lastPurchaseCheck = Date.now();
+
+  // Adjust towers as needed
   grimoire = Game.Objects["Wizard tower"].minigame;
   min_overlap = 25; /* Includes waiting for GC to appear & time to click it */
   min_magic = (AP.usage.grimoire == 2 ? 23 : Math.floor(10+.6*grimoire.magicM));
@@ -534,6 +539,10 @@ AP.handleSpellsDuringBuffs = function() {
     callback = function() {AP.conjureBakedGoods(buffWas)};
     AP.interval.grimoire = setInterval(callback, 200);
   } else {
+    // Avoid buying (or adjusting towers -- especially selling) when about to
+    // cast forceHandOfFate
+    AP.timer.lastPurchaseCheck = Date.now();
+
     buffWas = AP.currentBuff;
     callback = function() {AP.forceHandOfFate(buffWas)};
     AP.interval.grimoire = setInterval(callback, 200);
