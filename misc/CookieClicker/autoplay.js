@@ -537,6 +537,8 @@ AP.handleSpellsDuringBuffs = function() {
 
     buffWas = AP.currentBuff;
     callback = function() {AP.conjureBakedGoods(buffWas)};
+    if (AP.interval.grimoire)
+      clearInterval(AP.interval.grimoire);
     AP.interval.grimoire = setInterval(callback, 200);
   } else {
     // Avoid buying (or adjusting towers -- especially selling) when about to
@@ -545,6 +547,8 @@ AP.handleSpellsDuringBuffs = function() {
 
     buffWas = AP.currentBuff;
     callback = function() {AP.forceHandOfFate(buffWas)};
+    if (AP.interval.grimoire)
+      clearInterval(AP.interval.grimoire);
     AP.interval.grimoire = setInterval(callback, 200);
   }
 }
