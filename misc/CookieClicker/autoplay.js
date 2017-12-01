@@ -283,7 +283,7 @@ AP.adjustPantheon = function() {
   pantheon_adjusted = true;
 
   pantheon = Game.Objects.Temple.minigame
-  if (pantheon.swaps == 3) {
+  if (pantheon && pantheon.swaps == 3) {
     // Determine where we want this spirit
     value = Math.floor((Date.now() % 86400000) / 7200000)
 
