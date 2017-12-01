@@ -963,7 +963,7 @@ AP.handlePurchases = function() {
   bestBuffer = AP.determineBankBuffer(bestBuy.pp);
 
   // If we don't have enough to buy the best item, check for super cheap items
-  if (CM.Cache.lastCookies < bestBuffer + bestBuy.price) {
+  if (!bestBuy.price || CM.Cache.lastCookies < bestBuffer + bestBuy.price) {
     bestBuy = AP.determineBestBuy(AP.getCheapItem);
     // bestBuy could be {} here
     if (bestBuy.name)
