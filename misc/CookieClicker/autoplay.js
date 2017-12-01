@@ -724,6 +724,40 @@ AP.getSpontaneousEdificeBonus = function(item, price) {
   return se_bonus;
 }
 
+AP.getBestBonus = function(item, price) {
+  // See AP.getTruePP for what pp really means.  We simply abuse it in this
+  // function, calculating it kind of as
+  //    fakePrice / bonus
+  // where fakePrice = AP.trueCpS, meaning we treat everything as having the
+  // same price and thus try to buy whatever has the biggest bonus.  However,
+  // we special case things we don't have enough money for and treat them as
+  // having huge PP.
+  if (price > Game.cookies) {
+    return {pp: Number.MAX_VALUE, ratios: []};
+  }
+
+  if (CM.Cache.Upgrades[item]) {
+    // Do a special computation of projected payoff for particular items that
+    // CookieMonster simply returns Infinity for.
+    special_factor = AP.specialPPfactor[item]
+    if (special_factor) {
+      if (!AP.Options.clickSomeShimmers())
+        special_factor = Math.min(special_factor, 0.5);
+      bonus = special_factor * AP.trueCpS;
+    } else {
+      bonus = CM.Cache.Upgrades[item].bonus / AP.currentBuff;
+    }
+  } else if (CM.Cache.Objects[item]) {
+    bonus = CM.Cache.Objects[item].bonus / AP.currentBuff;
+    for (cost of AP.bulk_cost_factor)
+      if (price*cost < Game.cookies)
+        bonus *= 10;
+  }
+
+  // Return what we found
+  return {pp: AP.trueCpS/bonus, ratios: []};
+}
+
 AP.getTruePP = function(item, price) {
   // pp == Projected Payoff, mostly calculated by CookieMonster
   pp = Number.MAX_VALUE;
@@ -912,9 +946,20 @@ AP.handlePurchases = function() {
   if (Game.Has('Serendipity')) AP.building_special_factor = 0.00021;
   if (Game.Has('Get lucky')) AP.building_special_factor = 0.0009;
 
+  // Use a slightly modified strategy after restarts, to start up quicker
+  if (Game.resets > 0 && Date.now() - Game.startDate < 10000) // 10000 ms = 10s
+    AP.use_alternate_purchase_strategy_after_restart = true;
+
   // Find out what to purchase
   log_purchase_for_user = true;
-  bestBuy = AP.determineBestBuy(AP.getTruePP);
+  bestBuy = undefined
+  if (AP.use_alternate_purchase_strategy_after_restart) {
+    bestBuy = AP.determineBestBuy(AP.getBestBonus);
+    if (!bestBuy.name)
+      AP.use_alternate_purchase_strategy_after_restart = false;
+  }
+  if (!bestBuy || !bestBuy.name)
+    bestBuy = AP.determineBestBuy(AP.getTruePP);
   bestBuffer = AP.determineBankBuffer(bestBuy.pp);
 
   // If we don't have enough to buy the best item, check for super cheap items
@@ -1276,6 +1321,8 @@ AP.Init = function() {
   AP.usage.grimoire =     (Game.resets > 0 ? 1 : 0);
   AP.ruinCursors = 0;
   AP.grimoireTowers = 0;
+
+  AP.bulk_cost_factor = [AP.costToPurchase(10, 1), AP.costToPurchase(100, 1)];
 
   AP.spiritOfRuinDelayTokens = 0;
   AP.spiritOfRuinDelayBeforeBuying = false;
