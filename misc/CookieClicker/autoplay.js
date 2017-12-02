@@ -752,6 +752,14 @@ AP.getBestBonus = function(item, price) {
     for (cost of AP.bulk_cost_factor)
       if (price*cost < Game.cookies)
         bonus *= 10;
+    // Lie and bump the value of Grandmas/Mines/Antimatter condensors, because
+    // the real value is in having these other types AND their synergies
+    // (Lucky Grandmas, Gemmed Talismans, and Charm Quarks)
+    if (['Grandma','Mine','Antimatter condenser'].indexOf(item) != -1 &&
+        Game.Objects[item].amount <= 5 &&
+        Game.Objects.Chancemaker.amount >= 100) {
+      bonus = AP.trueCpS;
+    }
   }
 
   // Return what we found
