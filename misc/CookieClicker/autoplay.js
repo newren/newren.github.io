@@ -988,9 +988,12 @@ AP.handlePurchases = function() {
     // Determine if we should buy in bulk
     bulk_amount = 1;
     if (bestBuy.name in Game.Objects) {
+      limit = 5*AP.trueCpS;
+      if (AP.use_alternate_purchase_strategy_after_restart)
+        limit = CM.Cache.lastCookies;
       for (count of [10, 100]) {
         total_cost = AP.costToPurchase(count, bestBuy.price)
-        if (total_cost < 5*AP.trueCpS && CM.Cache.lastCookies >= total_cost)
+        if (total_cost < limit && CM.Cache.lastCookies >= total_cost)
           bulk_amount = count;
       }
       AP.buyBuilding(bestBuy.name, bulk_amount);
