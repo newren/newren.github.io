@@ -836,7 +836,8 @@ AP.determineBestBuy = function(metric) {
   // need a special case here.
   if (Game.cookiesPs === 0 && AP.Options.purchaseBuildings()) {
     return {name: "Cursor", price: Game.Objects.Cursor.getPrice(),
-            pp: CM.Cache.Objects.Cursor.pp, obj: Game.Objects.Cursor}
+            pp: CM.Cache.Objects.Cursor.pp, obj: Game.Objects.Cursor,
+            ratios: []}
   }
 
   // Find the item with the lowest projected payoff
