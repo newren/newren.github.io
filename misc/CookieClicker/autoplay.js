@@ -321,6 +321,127 @@ AP.adjustPantheon = function() {
 
 /*** Spell-casting ***/
 
+AP.compute_spell_factors = function(just_determining_bank_buffer) {
+  //
+  // First, Conjure Baked Goods
+  //
+
+  if (just_determining_bank_buffer) {
+    // buff_time will be min'ed with 26 or 13, we don't want to limit further
+    // than that, so just pick something arbitrarily large.
+    buff_time = Number.MAX_VALUE;
+
+    // We may not have a sufficient bank of cookies now, but if having a
+    // sufficient bank of cookies would lead to ability to cast more effective
+    // spells then we want to make sure to set the bank buffer large enough.
+    // So, see what is the better spell if we assume sufficiently many banked
+    // cookies.
+    ratio_of_desired_buffer = 1;
+  } else { // actively trying to cast a spell
+    buff_time = AP.currentBuffTimeLeft;
+    buff_mult = AP.currentBuff;
+
+    // If we were to cast conjure baked goods, what percentage of the optimal
+    // number of cookies could we hope to get?
+    desired_bank_buffer = 30 * 60 * AP.trueCpS * buff_mult / 0.15;
+    ratio_of_desired_buffer = Math.min(1, Game.cookies / desired_bank_buffer);
+  }
+  cbg_factor = 1.83 * ratio_of_desired_buffer;
+
+  //
+  // Second, Force the Hand of Fate
+  //
+
+  // If user doesn't want auto-clicking, then Force Hand of Fate has little
+  // or no value.  Also, if we don't have enough wizard towers.
+  if (AP.Config.BigCookieClicks == 0 || AP.buildingMax["Wizard tower"] < 21) {
+    fhof_factor = 0;
+  } else {
+    has_ruin = (Game.hasGod && Game.hasGod("ruin"))
+
+    // Which is better: conjuring baked goods or forcing the hand of fate?
+    ruin_mult = 1;
+    if (has_ruin && AP.usage.spiritOfRuin == 2) {
+      slot = has_ruin; // Game.hasGod returns which slot if it's in one
+      ruin_factor = .01 * Math.pow(2, 1-slot);
+      ruin_mult += ruin_factor * Game.Objects.Cursor.amount;
+    }
+
+    // Figure out cursor multiplier; could just add up number of "<X> mouse"
+    // upgrades and multiply by .01, but this is easier.
+    cursor_mult = Game.mouseCps()/Game.cookiesPs;
+
+    // How much time will we have during a potential click frenzy?  If we cast
+    // Force hand of Fate, it'll take about 3.5 seconds to find golden cookie
+    // and pop it (remember: pretending to have human-like reaction time),
+    // and another 1.5 seconds to see what the result is and whether action
+    // needs to be taken, for a total of five seconds off of whatever overlapped
+    // buff time we have.
+    duration = Math.min(buff_time, Game.Has("Get lucky") ? 26 : 13) - 5;
+
+    // Also, if we're using the spirit of ruin, 2 out of every 10 seconds
+    // used on buying and selling buildings.  And we won't sell if there
+    // won't be enough time left to make it worth it.
+    if (has_ruin) {
+      ruin_duration = 0;
+      while (duration) {
+        duration -= 2;
+        if (duration <= 3)
+          duration = 0;
+        remainder = Math.min(8, duration);
+        duration -= remainder;
+        ruin_duration += remainder;
+      }
+      duration = ruin_duration;
+    }
+
+    fhof_factor = ruin_mult * cursor_mult * duration;
+  }
+
+  //
+  // Third, Spontaneous Edifice
+  //
+  if (AP.buildingMax["Wizard tower"] < 77) {
+    se_factor = 0;
+  } else {
+    average_expensive_building = 0;
+    total_num = 0;
+    for (item in Game.Objects) {
+      num = Game.Objects[item].amount;
+      if (num > 0 && num < 400) {
+        average_expensive_building += Game.Objects[item].getPrice();
+        total_num += 1;
+      }
+    }
+    if (total_num > 0)
+      average_expensive_building /= total_num;
+    else if (Game.Objects["Chancemaker"].amount == 400) {
+      average_expensive_building = 40*10**39; // 40 duodecillion
+    }
+
+    se_factor = 0.000007327 * average_expensive_building / AP.trueCpS;
+  }
+
+  // With 73 magic, we can cast cbg 5 times.
+  // With 81 magic, we can cast fhof 2 times.
+  // With 77 magic, we can cast se 1 time.
+  //   Those three values are close enough to equal that I'll just use 5,2,1
+  factors = {
+    'cbg'  : (AP.usage.grimoire == 2 ? 5 : 1) * cbg_factor,
+    'fhof' : (AP.usage.grimoire == 2 ? 2 : 1) * fhof_factor,
+    'se'   :                                    se_factor
+  };
+  best = 'cbg'; best_factor = factors['cbg']
+  for (key in factors) {
+    if (factors[key] > best_factor) {
+      best = key;
+      best_factor = factors[key];
+    }
+  }
+  factors['best'] = best;
+  return factors;
+}
+
 AP.cbg_better_than_fhof = function(just_determining_bank_buffer) {
   // Exit early if big cookie clicks aren't wanted.  The whole point of
   // Force Hand Of Fate is to try to get click frenzies, which are only
@@ -521,7 +642,8 @@ AP.handleSpellsDuringBuffs = function() {
   if (Game.buffs["Magic inept"])
     return;
 
-  if (AP.cbg_better_than_fhof(0)) {
+  factors = AP.compute_spell_factors(0);
+  if (factors['best'] == 'cbg') {
     // Do we have enough to cast diminish ineptitude and conjure baked goods?
     if (AP.usage.grimoire == 2) {
       if (grimoire.magic < 11)
@@ -540,7 +662,7 @@ AP.handleSpellsDuringBuffs = function() {
     if (AP.interval.grimoire)
       clearInterval(AP.interval.grimoire);
     AP.interval.grimoire = setInterval(callback, 200);
-  } else {
+  } else if (factors['best'] == 'fhof') {
     // Avoid buying (or adjusting towers -- especially selling) when about to
     // cast forceHandOfFate
     AP.timer.lastPurchaseCheck = Date.now();
@@ -550,6 +672,12 @@ AP.handleSpellsDuringBuffs = function() {
     if (AP.interval.grimoire)
       clearInterval(AP.interval.grimoire);
     AP.interval.grimoire = setInterval(callback, 200);
+  } else if (factors['best'] == 'se') {
+    // Do nothing; we don't cast spontaneous edifice in response to golden
+    // cookies, just in response to magic filling up.
+  } else {
+    console.error("Unexpected best spell choice; can't handle: " +
+                  factors['best']);
   }
 }
 
@@ -925,6 +1053,7 @@ AP.determinePatientBankBuffer = function(item_pp) {
 }
 
 AP.determineBankBuffer = function(item_pp) {
+  // FIXME: Code for bank buffer with spontaneous edifice should move here too
   if (AP.Config.AutoPurchase == 1)
     return 0;
   else if (AP.Config.AutoPurchase == 2)
@@ -935,6 +1064,75 @@ AP.determineBankBuffer = function(item_pp) {
     return AP.determinePatientBankBuffer(item_pp);
 
   console.error(`Invalid AP.Config.AutoPurchase value of ${AP.Config.AutoPurchase} in AP.determineBankBuffer`);
+}
+
+AP.determineBestSpontaneousPurchase = function() {
+  chancemaker_price = Game.Objects["Chancemaker"].getPrice();
+
+  // Sell a chancemaker, if conditions are right
+  if (Game.Objects["Chancemaker"].amount == 400) {
+    console.log(`Selling a chancemaker; we hit 400.`);
+    AP.sellBuilding("Chancemaker", 1);
+    return {};
+  }
+
+  // Find out best building to buy (we'll only buy it if we have enough
+  // buffer in the bank)
+  best = {}
+  best_price = chancemaker_price*1.001;
+  for (name in Game.Objects) {
+    bldg = Game.Objects[name]
+    bldg_price = bldg.getPrice();
+    if (bldg.amount < 400 && bldg_price < best_price &&
+        (bldg.amount < 399 || name !== 'Chancemaker')) {
+      best_price = bldg_price;
+      best = {name: name, price: bldg_price, pp: 3600, ratios: [], obj: bldg};
+    }
+  }
+
+  return best;
+}
+
+AP.purchaseStrategy = function() {
+  choice = undefined
+  if (AP.use_alternate_purchase_strategy_after_restart) {
+    choice = AP.determineBestBuy(AP.getBestBonus);
+    if (choice.name) {
+      choice.buffer = 0;
+      return choice;
+    }
+    AP.use_alternate_purchase_strategy_after_restart = false;
+  }
+
+  factors = AP.compute_spell_factors(1);
+  if (factors['best'] == 'se') {
+    // FIXME: We can both sell a chancemaker and take a non-purchase decision
+    // (e.g. adjusting pantheon) in the same cycle; need to fix this.
+    choice = AP.determineBestSpontaneousPurchase();
+    // 0.5 is not enough; if you have just under 0.5, then the logic will
+    // sell a chancemaker, you'll have a whole bunch of cash, the price of
+    // chancemakers will go down slightly, you'll buy a chancemaker, then
+    // you again won't have enough, you'll sell another one, then you'll
+    // finally spontaneous edifice.  Just make the buffer a little higher
+    // to avoid this weird cycle.
+    buffer = 0.6 * Game.Objects["Chancemaker"].getPrice();
+  } else {
+    choice = AP.determineBestBuy(AP.getTruePP);
+    buffer = AP.determineBankBuffer(choice.pp);
+
+    // If we don't have enough to buy the best item, check for super cheap
+    // items (make sure super cheap items that don't directly impact CpS but
+    // have some kind of indirect impact eventually get bought).
+    if (!choice.price || CM.Cache.lastCookies < buffer + choice.price) {
+      choice = AP.determineBestBuy(AP.getCheapItem);
+      // choice could be {} here
+      if (choice.name)
+        buffer = 0;
+    }
+  }
+
+  choice.buffer = buffer;
+  return choice;
 }
 
 AP.handlePurchases = function() {
@@ -961,23 +1159,7 @@ AP.handlePurchases = function() {
 
   // Find out what to purchase
   log_purchase_for_user = true;
-  bestBuy = undefined
-  if (AP.use_alternate_purchase_strategy_after_restart) {
-    bestBuy = AP.determineBestBuy(AP.getBestBonus);
-    if (!bestBuy.name)
-      AP.use_alternate_purchase_strategy_after_restart = false;
-  }
-  if (!bestBuy || !bestBuy.name)
-    bestBuy = AP.determineBestBuy(AP.getTruePP);
-  bestBuffer = AP.determineBankBuffer(bestBuy.pp);
-
-  // If we don't have enough to buy the best item, check for super cheap items
-  if (!bestBuy.price || CM.Cache.lastCookies < bestBuffer + bestBuy.price) {
-    bestBuy = AP.determineBestBuy(AP.getCheapItem);
-    // bestBuy could be {} here
-    if (bestBuy.name)
-      bestBuffer = 0;
-  }
+  best = AP.purchaseStrategy();
 
   // Don't log the purchase for the user if we're just buying back what we
   // already had before
@@ -985,40 +1167,40 @@ AP.handlePurchases = function() {
     AP.lastResets = Game.resets
     for (bldg in Game.Objects)
       AP.buildingMax[bldg] = Game.Objects[bldg].amount;
-  } else if (Game.Objects[bestBuy.name] &&
-             AP.buildingMax[bestBuy.name] >
-             Game.Objects[bestBuy.name].amount) {
+  } else if (Game.Objects[best.name] &&
+             AP.buildingMax[best.name] >
+             Game.Objects[best.name].amount) {
     log_purchase_for_user = false;
   }
 
   // Purchase if we have enough
-  if (bestBuy.price && CM.Cache.lastCookies >= bestBuffer + bestBuy.price) {
+  if (best.price && CM.Cache.lastCookies >= best.buffer + best.price) {
 
     // Determine if we should buy in bulk
     bulk_amount = 1;
-    if (bestBuy.name in Game.Objects) {
+    if (best.name in Game.Objects) {
       limit = 5*AP.trueCpS;
       if (AP.use_alternate_purchase_strategy_after_restart)
         limit = CM.Cache.lastCookies;
       for (count of [10, 100]) {
-        total_cost = AP.costToPurchase(count, bestBuy.price)
+        total_cost = AP.costToPurchase(count, best.price)
         if (total_cost < limit && CM.Cache.lastCookies >= total_cost)
           bulk_amount = count;
       }
-      AP.buyBuilding(bestBuy.name, bulk_amount);
+      AP.buyBuilding(best.name, bulk_amount);
     } else {
-      bestBuy.obj.buy();
+      best.obj.buy();
     }
 
     // Log what we're doing
     if (log_purchase_for_user) {
       ratio_string = ''
-      if (bestBuy.ratios.length) {
-        formatted_ratios = bestBuy.ratios.map(x=>{return x.toExponential(2)});
+      if (best.ratios.length) {
+        formatted_ratios = best.ratios.map(x=>{return x.toExponential(2)});
         ratio_string = ` and ratios [${formatted_ratios.join(', ')}]`;
       }
-      console.log(`Bought ${bulk_amount} ${bestBuy.name}(s) `+
-                  `(with PP of ${Beautify(bestBuy.pp)}${ratio_string}) ` +
+      console.log(`Bought ${bulk_amount} ${best.name}(s) `+
+                  `(with PP of ${Beautify(best.pp)}${ratio_string}) ` +
                   `at ${Date().toString()}`)
     }
   } else if (AP.adjustTowers()) {
@@ -1028,6 +1210,23 @@ AP.handlePurchases = function() {
   } else if (AP.adjustPantheon()) {
     // guess there's not much to do here right now, but maybe there will be
     // in the future
+  } else if (factors['best'] == 'se' &&
+             grimoire.magic == grimoire.magicM &&
+             grimoire.magic >= 77) {
+
+    // Sell a chancemaker, if we don't have enough cookies
+    chancemaker_price = Game.Objects["Chancemaker"].getPrice();
+    if (Game.cookies < chancemaker_price/2) {
+      console.log(`Insufficient funds; selling a chancemaker (` +
+                  `cookies == ${Beautify(Game.cookies)}, ` +
+                  `cost == ${Beautify(chancemaker_price)}, ` +
+                  `#chancemakers == ${Game.Objects["Chancemaker"].amount})`);
+      AP.sellBuilding("Chancemaker", 1);
+    } else {
+      console.log(`Cast Spontaneous Edifice at ${Date().toString()}`);
+      se = Game.Objects["Wizard tower"].minigame.spells["spontaneous edifice"];
+      Game.Objects["Wizard tower"].minigame.castSpell(se);
+    }
   }
 
   // Record the new maximum number of buildings (which could have changed due
