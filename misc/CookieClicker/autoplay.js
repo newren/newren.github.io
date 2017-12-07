@@ -1210,7 +1210,8 @@ AP.handlePurchases = function() {
   } else if (AP.adjustPantheon()) {
     // guess there's not much to do here right now, but maybe there will be
     // in the future
-  } else if (factors['best'] == 'se' &&
+  } else if (AP.Config.GrimoireSpellcasting &&
+             factors['best'] == 'se' &&
              grimoire.magic == grimoire.magicM &&
              grimoire.magic >= 77) {
 
