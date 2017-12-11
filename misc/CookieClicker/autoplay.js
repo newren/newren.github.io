@@ -963,7 +963,7 @@ AP.determineBestBuy = function(metric) {
   // anything, pp for all upgrades is NaN or Infinity, so we really do
   // need a special case here.
   if (Game.cookiesPs === 0 && AP.Options.purchaseBuildings()) {
-    return {name: "Cursor", price: Game.Objects.Cursor.getPrice(),
+    return {name: "Cursor", price: Game.Objects.Cursor.getPrice(), amount: 1,
             pp: CM.Cache.Objects.Cursor.pp, obj: Game.Objects.Cursor,
             ratios: []}
   }
@@ -979,8 +979,8 @@ AP.determineBestBuy = function(metric) {
           ppinfo = metric(item, price);
           if (ppinfo.pp < lowestPP) {
             lowestPP = ppinfo.pp;
-            best = {name: item, price: price, pp: ppinfo.pp, ratios: [],
-                    obj: Game.Upgrades[item]}
+            best = {name: item, price: price, amount: 1,
+                    pp: ppinfo.pp, ratios: [], obj: Game.Upgrades[item]}
           } //else { console.log(`Skipping ${item}; not better PP`) }
         } //else { console.log(`Skipping ${item}; in ignore list`) }
       } //else { console.log(`Skipping ${item}; not unlocked`) }
@@ -993,8 +993,21 @@ AP.determineBestBuy = function(metric) {
       ppinfo.pp = Math.max(ppinfo.pp, AP.itemLimitsForMinigames(item, price));
       if (ppinfo.pp < lowestPP) {
         lowestPP = ppinfo.pp;
-        best = {name: item, price: price, pp: ppinfo.pp, ratios: ppinfo.ratios,
-                obj: Game.Objects[item]}
+        best = {name: item, price: price, amount: 1,
+                pp: ppinfo.pp, ratios: ppinfo.ratios, obj: Game.Objects[item]}
+
+        // Determine if we should buy in bulk
+        bulk_amount = 1;
+        limit = 5*AP.trueCpS;
+        if (AP.use_alternate_purchase_strategy_after_restart)
+          limit = CM.Cache.lastCookies;
+        for (count of [10, 100]) {
+          total_cost = AP.costToPurchase(count, best.price)
+          if (total_cost < limit && CM.Cache.lastCookies >= total_cost)
+            bulk_amount = count;
+        }
+        best.amount = bulk_amount;
+
       } //else { console.log(`Skipping ${item}; not better PP`) }
     }
   }
@@ -1086,7 +1099,8 @@ AP.determineBestSpontaneousPurchase = function() {
     if (bldg.amount < 400 && bldg_price < best_price &&
         (bldg.amount < 399 || name !== 'Chancemaker')) {
       best_price = bldg_price;
-      best = {name: name, price: bldg_price, pp: 3600, ratios: [], obj: bldg};
+      best = {name: name, price: bldg_price, amount: 1,
+              pp: 3600, ratios: [], obj: bldg};
     }
   }
 
@@ -1168,29 +1182,19 @@ AP.handlePurchases = function() {
     for (bldg in Game.Objects)
       AP.buildingMax[bldg] = Game.Objects[bldg].amount;
   } else if (Game.Objects[best.name] &&
-             AP.buildingMax[best.name] >
-             Game.Objects[best.name].amount) {
+             AP.buildingMax[best.name] >=
+             Game.Objects[best.name].amount + best.amount) {
     log_purchase_for_user = false;
   }
 
   // Purchase if we have enough
-  if (best.price && CM.Cache.lastCookies >= best.buffer + best.price) {
+  if (best.price && best.amount != 0 &&
+      CM.Cache.lastCookies >= best.buffer + best.price) {
 
-    // Determine if we should buy in bulk
-    bulk_amount = 1;
-    if (best.name in Game.Objects) {
-      limit = 5*AP.trueCpS;
-      if (AP.use_alternate_purchase_strategy_after_restart)
-        limit = CM.Cache.lastCookies;
-      for (count of [10, 100]) {
-        total_cost = AP.costToPurchase(count, best.price)
-        if (total_cost < limit && CM.Cache.lastCookies >= total_cost)
-          bulk_amount = count;
-      }
-      AP.buyBuilding(best.name, bulk_amount);
-    } else {
+    if (!(best.name in Game.Objects))
       best.obj.buy();
-    }
+    else
+      AP.buyBuilding(best.name, best.amount);
 
     // Log what we're doing
     if (log_purchase_for_user) {
@@ -1199,7 +1203,7 @@ AP.handlePurchases = function() {
         formatted_ratios = best.ratios.map(x=>{return x.toExponential(2)});
         ratio_string = ` and ratios [${formatted_ratios.join(', ')}]`;
       }
-      console.log(`Bought ${bulk_amount} ${best.name}(s) `+
+      console.log(`Bought ${best.amount} ${best.name}(s) `+
                   `(with PP of ${Beautify(best.pp)}${ratio_string}) ` +
                   `at ${Date().toString()}`)
     }
