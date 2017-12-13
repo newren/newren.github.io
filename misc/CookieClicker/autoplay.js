@@ -1111,7 +1111,7 @@ AP.purchaseStrategy = function() {
   choice = undefined
   if (AP.use_alternate_purchase_strategy_after_restart) {
     choice = AP.determineBestBuy(AP.getBestBonus);
-    if (choice.name) {
+    if (choice.name && Date.now() - Game.startDate < 30*60*1000) {
       choice.buffer = 0;
       return choice;
     }
