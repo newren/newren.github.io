@@ -1085,8 +1085,8 @@ AP.determineBestSpontaneousPurchase = function() {
   // Sell a chancemaker, if conditions are right
   if (Game.Objects["Chancemaker"].amount == 400) {
     console.log(`Selling a chancemaker; we hit 400.`);
-    AP.sellBuilding("Chancemaker", 1);
-    return {};
+    return {name: "Chancemaker", price: chancemaker_price, amount: -1,
+            pp: 3600, ratios: [], obj: Game.Objects["Chancemaker"]};
   }
 
   // Find out best building to buy (we'll only buy it if we have enough
@@ -1120,16 +1120,19 @@ AP.purchaseStrategy = function() {
 
   factors = AP.compute_spell_factors(1);
   if (factors['best'] == 'se') {
-    // FIXME: We can both sell a chancemaker and take a non-purchase decision
-    // (e.g. adjusting pantheon) in the same cycle; need to fix this.
     choice = AP.determineBestSpontaneousPurchase();
-    // 0.5 is not enough; if you have just under 0.5, then the logic will
-    // sell a chancemaker, you'll have a whole bunch of cash, the price of
-    // chancemakers will go down slightly, you'll buy a chancemaker, then
-    // you again won't have enough, you'll sell another one, then you'll
-    // finally spontaneous edifice.  Just make the buffer a little higher
-    // to avoid this weird cycle.
-    buffer = 0.6 * Game.Objects["Chancemaker"].getPrice();
+    if (choice.amount > 0) {
+      // 0.5 is not enough; if you have just under 0.5, then the logic will
+      // sell a chancemaker, you'll have a whole bunch of cash, the price of
+      // chancemakers will go down slightly, you'll buy a chancemaker, then
+      // you again won't have enough, you'll sell another one, then you'll
+      // finally spontaneous edifice.  Just make the buffer a little higher
+      // to avoid this weird cycle.
+      buffer = 0.6 * Game.Objects["Chancemaker"].getPrice();
+    } else {
+      // If we're selling, we don't need to wait.
+      buffer = -1 * choice.price;
+    }
   } else {
     choice = AP.determineBestBuy(AP.getTruePP);
     buffer = AP.determineBankBuffer(choice.pp);
@@ -1193,8 +1196,10 @@ AP.handlePurchases = function() {
 
     if (!(best.name in Game.Objects))
       best.obj.buy();
-    else
+    else if (best.amount > 0)
       AP.buyBuilding(best.name, best.amount);
+    else // best.amount < 0
+      AP.sellBuilding(best.name, -1*best.amount);
 
     // Log what we're doing
     if (log_purchase_for_user) {
