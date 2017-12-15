@@ -1153,16 +1153,7 @@ AP.purchaseStrategy = function() {
 }
 
 AP.handlePurchases = function() {
-  // Don't run this function too often, even if stats are updated more
-  // frequently (see CM.Config.UpStats and CM.ConfigData.UpStats)
-  if (Date.now() - AP.timer.lastActionCheck < 5000 ||
-      Date.now() - AP.timer.lastPop < 10000)
-    return;
-  AP.timer.lastActionCheck = Date.now();
-
-  // Don't buy upgrades or buildings while in a clickfest or adjusting towers
-  if (AP.clickInterval || AP.towerInterval)
-    return;
+  purchaseMade = true;
 
   // Set a small factor to help with building purchase decisions
   AP.building_special_factor = 0.000058;
@@ -1177,6 +1168,9 @@ AP.handlePurchases = function() {
   // Find out what to purchase
   log_purchase_for_user = true;
   best = AP.purchaseStrategy();
+
+  if (best.amount == 0)
+    return !purchaseMade;
 
   // Don't log the purchase for the user if we're just buying back what we
   // already had before
@@ -1212,13 +1206,42 @@ AP.handlePurchases = function() {
                   `(with PP of ${Beautify(best.pp)}${ratio_string}) ` +
                   `at ${Date().toString()}`)
     }
+    purchaseMade = true;
+  } else {
+    purchaseMade = false;
+  }
+
+  // Record the new maximum number of buildings (which could have changed due
+  // to the user buying since we last ran or by our purchasing above)
+  for (bldg in Game.Objects)
+    AP.buildingMax[bldg] = Math.max(
+      AP.buildingMax[bldg], Game.Objects[bldg].amount);
+
+  return purchaseMade;
+}
+
+/*** Overall actions ***/
+
+AP.handleActions = function() {
+  // Don't run this function too often, even if stats are updated more
+  // frequently (see CM.Config.UpStats and CM.ConfigData.UpStats)
+  if (Date.now() - AP.timer.lastActionCheck < 5000 ||
+      Date.now() - AP.timer.lastPop < 10000)
+    return;
+  AP.timer.lastActionCheck = Date.now();
+
+  // Don't buy upgrades or buildings while in a clickfest or adjusting towers
+  if (AP.clickInterval || AP.towerInterval) {
+    return;
+  } else if (AP.Options.doSomePurchases() && AP.handlePurchases()) {
+    return;
   } else if (AP.adjustTowers()) {
     // One adjustment usually isn't enough; make sure we keep adjusting until
     // it's up or down to the right value
     AP.towerInterval = setInterval(AP.adjustTowers, 200);
+    return;
   } else if (AP.adjustPantheon()) {
-    // guess there's not much to do here right now, but maybe there will be
-    // in the future
+    return;
   } else if (AP.Config.GrimoireSpellcasting &&
              factors['best'] == 'se' &&
              grimoire.magic == grimoire.magicM &&
@@ -1237,13 +1260,10 @@ AP.handlePurchases = function() {
       se = Game.Objects["Wizard tower"].minigame.spells["spontaneous edifice"];
       Game.Objects["Wizard tower"].minigame.castSpell(se);
     }
+    return;
   }
 
-  // Record the new maximum number of buildings (which could have changed due
-  // to the user buying since we last ran or by our purchasing above)
-  for (bldg in Game.Objects)
-    AP.buildingMax[bldg] = Math.max(
-      AP.buildingMax[bldg], Game.Objects[bldg].amount);
+  // Nothing to do this interval.  Maybe there will be next time.
 }
 
 /*** Code dealing with whether we should turn on "unusual" usage strategies **/
@@ -1472,8 +1492,7 @@ AP.RemakePP = function() {
 
   AP.recomputeBuffs();
   AP.checkUnusualUsageStrategies();
-  if (AP.Options.doSomePurchases())
-    AP.handlePurchases();
+  AP.handleActions();
 }
 
 AP.NewUpdateMenu = function() {
