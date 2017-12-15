@@ -81,7 +81,7 @@ AP.clearClickInterval = function() {
   AP.clickInterval = undefined;
   // Make there be a good gap between a clicking frenzy and any purchase
   // automatically made afterward.
-  AP.timer.lastPurchaseCheck = Date.now() + 5000;
+  AP.timer.lastActionCheck = Date.now() + 5000;
 }
 
 AP.doClicking = function() {
@@ -608,7 +608,7 @@ AP.conjureBakedGoods = function(original_buff) {
 AP.forceHandOfFate = function(original_buff) {
   // Avoid buying (or adjusting towers -- especially selling) when about to
   // cast forceHandOfFate
-  AP.timer.lastPurchaseCheck = Date.now();
+  AP.timer.lastActionCheck = Date.now();
 
   // Adjust towers as needed
   grimoire = Game.Objects["Wizard tower"].minigame;
@@ -665,7 +665,7 @@ AP.handleSpellsDuringBuffs = function() {
   } else if (factors['best'] == 'fhof') {
     // Avoid buying (or adjusting towers -- especially selling) when about to
     // cast forceHandOfFate
-    AP.timer.lastPurchaseCheck = Date.now();
+    AP.timer.lastActionCheck = Date.now();
 
     buffWas = AP.currentBuff;
     callback = function() {AP.forceHandOfFate(buffWas)};
@@ -728,7 +728,7 @@ AP.adjustTowers = function(sell_until_equal) {
     AP.towerInterval = undefined;
     // Don't purchase other buildings immediately after trying to
     // adjust towers; make sure to wait at least a little bit.
-    AP.timer.lastPurchaseCheck = Date.now() + 2500;
+    AP.timer.lastActionCheck = Date.now() + 2500;
   }
 
   return !action_taken;
@@ -1155,10 +1155,10 @@ AP.purchaseStrategy = function() {
 AP.handlePurchases = function() {
   // Don't run this function too often, even if stats are updated more
   // frequently (see CM.Config.UpStats and CM.ConfigData.UpStats)
-  if (Date.now() - AP.timer.lastPurchaseCheck < 5000 ||
+  if (Date.now() - AP.timer.lastActionCheck < 5000 ||
       Date.now() - AP.timer.lastPop < 10000)
     return;
-  AP.timer.lastPurchaseCheck = Date.now();
+  AP.timer.lastActionCheck = Date.now();
 
   // Don't buy upgrades or buildings while in a clickfest or adjusting towers
   if (AP.clickInterval || AP.towerInterval)
@@ -1529,7 +1529,7 @@ AP.Init = function() {
   AP.timer = {};
 
   AP.timer.lastPop = Date.now();
-  AP.timer.lastPurchaseCheck = Date.now();
+  AP.timer.lastActionCheck = Date.now();
   AP.buildingMax = {};
   AP.clickInterval = undefined;
   AP.towerInterval = undefined;
