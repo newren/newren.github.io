@@ -659,6 +659,36 @@ AP.adjustTowers = function(sell_until_equal) {
   return !action_taken;
 }
 
+AP.castASpell = function() {
+  action_taken = true;
+  grimoire = Game.Objects["Wizard tower"].minigame;
+
+  // Spontaneous Edifice
+  if (AP.Config.GrimoireSpellcasting &&
+      AP.spell_factors['best'] == 'se' &&
+      grimoire.magic == grimoire.magicM &&
+      grimoire.magic >= 77) {
+
+    // Sell a chancemaker, if we don't have enough cookies
+    chancemaker_price = Game.Objects["Chancemaker"].getPrice();
+    if (Game.cookies < chancemaker_price/2) {
+      console.log(`Insufficient funds; selling a chancemaker (` +
+                  `cookies == ${Beautify(Game.cookies)}, ` +
+                  `cost == ${Beautify(chancemaker_price)}, ` +
+                  `#chancemakers == ${Game.Objects["Chancemaker"].amount})`);
+      AP.sellBuilding("Chancemaker", 1);
+    } else {
+      console.log(`Cast Spontaneous Edifice at ${Date().toString()}`);
+      se = Game.Objects["Wizard tower"].minigame.spells["spontaneous edifice"];
+      Game.Objects["Wizard tower"].minigame.castSpell(se);
+    }
+
+    return action_taken;
+  }
+
+  return !action_taken;
+}
+
 /*** Figuring out expected time ***/
 
 AP.expectedTimeUntil = function(gcevent) {
@@ -1171,24 +1201,7 @@ AP.handleActions = function() {
     return;
   } else if (AP.adjustPantheon()) {
     return;
-  } else if (AP.Config.GrimoireSpellcasting &&
-             AP.spell_factors['best'] == 'se' &&
-             grimoire.magic == grimoire.magicM &&
-             grimoire.magic >= 77) {
-
-    // Sell a chancemaker, if we don't have enough cookies
-    chancemaker_price = Game.Objects["Chancemaker"].getPrice();
-    if (Game.cookies < chancemaker_price/2) {
-      console.log(`Insufficient funds; selling a chancemaker (` +
-                  `cookies == ${Beautify(Game.cookies)}, ` +
-                  `cost == ${Beautify(chancemaker_price)}, ` +
-                  `#chancemakers == ${Game.Objects["Chancemaker"].amount})`);
-      AP.sellBuilding("Chancemaker", 1);
-    } else {
-      console.log(`Cast Spontaneous Edifice at ${Date().toString()}`);
-      se = Game.Objects["Wizard tower"].minigame.spells["spontaneous edifice"];
-      Game.Objects["Wizard tower"].minigame.castSpell(se);
-    }
+  } else if (AP.castASpell()) {
     return;
   }
 
