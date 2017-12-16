@@ -1118,8 +1118,7 @@ AP.purchaseStrategy = function() {
     AP.use_alternate_purchase_strategy_after_restart = false;
   }
 
-  factors = AP.compute_spell_factors(1);
-  if (factors['best'] == 'se') {
+  if (AP.spell_factors['best'] == 'se') {
     choice = AP.determineBestSpontaneousPurchase();
     if (choice.amount > 0) {
       // 0.5 is not enough; if you have just under 0.5, then the logic will
@@ -1243,7 +1242,7 @@ AP.handleActions = function() {
   } else if (AP.adjustPantheon()) {
     return;
   } else if (AP.Config.GrimoireSpellcasting &&
-             factors['best'] == 'se' &&
+             AP.spell_factors['best'] == 'se' &&
              grimoire.magic == grimoire.magicM &&
              grimoire.magic >= 77) {
 
@@ -1492,6 +1491,7 @@ AP.RemakePP = function() {
 
   AP.recomputeBuffs();
   AP.checkUnusualUsageStrategies();
+  AP.spell_factors = AP.compute_spell_factors(1);
   AP.handleActions();
 }
 
