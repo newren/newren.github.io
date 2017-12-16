@@ -442,81 +442,6 @@ AP.compute_spell_factors = function(just_determining_bank_buffer) {
   return factors;
 }
 
-AP.cbg_better_than_fhof = function(just_determining_bank_buffer) {
-  // Exit early if big cookie clicks aren't wanted.  The whole point of
-  // Force Hand Of Fate is to try to get click frenzies, which are only
-  // useful if we're doing auto-clicking.  So if the user doesn't want us
-  // auto-clicking, Conjure Baked Goods is always better.
-  if (AP.Config.BigCookieClicks == 0)
-    return true;
-
-  if (just_determining_bank_buffer) {
-    // buff_time will be min'ed with 26 or 13, we don't want to limit further
-    // than that, so just pick something arbitrarily large.
-    buff_time = Number.MAX_VALUE;
-
-    // We may not have a sufficient bank of cookies now, but if having a
-    // sufficient bank of cookies would lead to ability to cast more effective
-    // spells then we want to make sure to set the bank buffer large enough.
-    // So, see what is the better spell if we assume sufficiently many banked
-    // cookies.
-    ratio_of_desired_buffer = 1;
-  } else { // actively trying to cast a spell
-    buff_time = AP.currentBuffTimeLeft;
-    buff_mult = AP.currentBuff;
-
-    // If we were to cast conjure baked goods, what percentage of the optimal
-    // number of cookies could we hope to get?
-    desired_bank_buffer = 30 * 60 * AP.trueCpS * buff_mult / 0.15;
-    ratio_of_desired_buffer = Math.min(1, Game.cookies / desired_bank_buffer);
-  }
-
-  // Can't cast HofF if we don't have enough magic
-  if (AP.buildingMax["Wizard tower"] < 21)
-    return true;
-  has_ruin = (Game.hasGod && Game.hasGod("ruin"))
-
-  // Which is better: conjuring baked goods or forcing the hand of fate?
-  ruin_mult = 1;
-  if (has_ruin && AP.usage.spiritOfRuin == 2) {
-    slot = has_ruin; // Game.hasGod returns which slot if it's in one
-    ruin_factor = .01 * Math.pow(2, 1-slot);
-    ruin_mult += ruin_factor * Game.Objects.Cursor.amount;
-  }
-
-  // Figure out cursor multiplier; could just add up number of "<X> mouse"
-  // upgrades and multiply by .01, but this is easier.
-  cursor_mult = Game.mouseCps()/Game.cookiesPs;
-
-  // How much time will we have during a potential click frenzy?  If we cast
-  // Force hand of Fate, it'll take about 3.5 seconds to find golden cookie
-  // and pop it (remember: pretending to have human-like reaction time),
-  // and another 1.5 seconds to see what the result is and whether action
-  // needs to be taken, for a total of five seconds off of whatever overlapped
-  // buff time we have.
-  duration = Math.min(buff_time, Game.Has("Get lucky") ? 26 : 13) - 5;
-
-  // Also, if we're using the spirit of ruin, 2 out of every 10 seconds used on
-  // buying and selling buildings.  And we won't sell if there won't be enough
-  // time left to make it worth it.
-  if (has_ruin) {
-    ruin_duration = 0;
-    while (duration) {
-      duration -= 2;
-      if (duration <= 3)
-        duration = 0;
-      remainder = Math.min(8, duration);
-      duration -= remainder;
-      ruin_duration += remainder;
-    }
-    duration = ruin_duration;
-  }
-
-  // Let our caller know if conjure baked goods is better than hand of fate.
-  factor = (AP.usage.grimoire == 2 ? 2.5*1.83 : 1.83);
-  return factor * ratio_of_desired_buffer > ruin_mult * cursor_mult * duration;
-}
-
 AP.handleSpellAdjustments = function(original_buff, min_buff_time_overlap,
                                      min_magic_needed, factor) {
   action_taken = true;
@@ -1019,6 +944,11 @@ AP.determinePatientBankBuffer = function(item_pp) {
   if (Game.cookiesPs === 0)
     return 0;
 
+  // Sanity check
+  if (AP.spell_factors['best'] != 'cbg' && AP.spell_factors['best'] != 'fhof')
+    console.error("Should not have reached here when " +
+                  `AP.spell_factors['best'] = ${AP.spell_factors['best']}`);
+
   // Do golden cookies overlap?  Is the Grimoire minigame in play?
   gc_overlap = Game.Upgrades["Get lucky"].bought
   grimoire = Game.Objects["Wizard tower"].minigame &&
@@ -1036,9 +966,9 @@ AP.determinePatientBankBuffer = function(item_pp) {
     if (grimoire) {
       expected_time = AP.timeUntilMagicFill() + AP.expectedTimeUntil("Frenzy");
       if (item_pp > factor*expected_time) {
-        if (AP.cbg_better_than_fhof(1))
+        if (AP.spell_factors['best'] == 'cbg')
           return 2*CM.Cache.LuckyFrenzy - cookies_before_gc;
-        else
+        else if (AP.spell_factors['best'] == 'fhof')
           return CM.Cache.LuckyFrenzy - cookies_before_gc;
       }
     }
@@ -1051,9 +981,9 @@ AP.determinePatientBankBuffer = function(item_pp) {
       expected_time = AP.timeUntilMagicFill() +
                       AP.expectedTimeUntil("FrenzyXDHoBS");
       if (item_pp > factor*expected_time) {
-        if (AP.cbg_better_than_fhof(1))
+        if (AP.spell_factors['best'] == 'cbg')
           return 30*CM.Cache.LuckyFrenzy - cookies_before_gc;
-        else
+        else if (AP.spell_factors['best'] == 'fhof')
           return 15*CM.Cache.LuckyFrenzy - cookies_before_gc;
       }
     }
