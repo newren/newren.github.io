@@ -662,27 +662,33 @@ AP.adjustTowers = function(sell_until_equal) {
 AP.castASpell = function() {
   action_taken = true;
   grimoire = Game.Objects["Wizard tower"].minigame;
-
-  // Spontaneous Edifice
   if (AP.Config.GrimoireSpellcasting &&
       AP.spell_factors['best'] == 'se' &&
       grimoire.magic == grimoire.magicM &&
       grimoire.magic >= 77) {
 
-    // Sell a chancemaker, if we don't have enough cookies
-    chancemaker_price = Game.Objects["Chancemaker"].getPrice();
-    if (Game.cookies < chancemaker_price/2) {
-      console.log(`Insufficient funds; selling a chancemaker (` +
+    // Sell most expensive building, if we don't have enough cookies
+    expensive = {'item': undefined, cost: 0};
+    for (item in Game.Objects) {
+      num = Game.Objects[item].amount;
+      cost = Game.Objects[item].getPrice();
+      if (num > 0 && num < 400 && cost > expensive.cost) {
+          expensive.item = item;
+          expensive.cost = cost;
+      }
+    }
+
+    if (Game.cookies < expensive.cost/2) {
+      console.log(`Insufficient funds; selling a ${expensive.item} (` +
                   `cookies == ${Beautify(Game.cookies)}, ` +
-                  `cost == ${Beautify(chancemaker_price)}, ` +
-                  `#chancemakers == ${Game.Objects["Chancemaker"].amount})`);
-      AP.sellBuilding("Chancemaker", 1);
+                  `cost == ${Beautify(expensive.cost)}, ` +
+                  `#${expensive.item} == ${Game.Objects[expensive.item].amount})`);
+      AP.sellBuilding(expensive.item, 1);
     } else {
       console.log(`Cast Spontaneous Edifice at ${Date().toString()}`);
       se = Game.Objects["Wizard tower"].minigame.spells["spontaneous edifice"];
       Game.Objects["Wizard tower"].minigame.castSpell(se);
     }
-
     return action_taken;
   }
 
