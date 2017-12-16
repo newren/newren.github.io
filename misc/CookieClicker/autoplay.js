@@ -73,7 +73,7 @@ AP.Options = {}
 /*** Big Cookie clicking related functions ***/
 
 AP.clickingNeeded = function() {
-  return AP.currentClickBuff > 1 && AP.Config.BigCookieClicks == 1;
+  return AP.currentClickBuff > 1 && AP.Config.Clicking.BigCookie == 1;
 }
 
 AP.clearClickInterval = function() {
@@ -135,7 +135,7 @@ AP.shimmerAct = function() {
 
   // Otherwise, check to see if we want to take advantage of some spell
   // casting
-  else if (AP.Config.GrimoireSpellcasting)
+  else if (AP.Config.Minigames.SpellCasting)
     AP.handleSpellsDuringBuffs();
 }
 
@@ -143,7 +143,7 @@ AP.popOne = function() {
   if (Date.now() - AP.timer.lastPop > 1000) {
     Game.shimmers.some(function(shimmer) {
       if (shimmer.type !== 'golden' || shimmer.wrath === 0 ||
-          AP.Config.ShimmerTypes == 2) {  // FIXME, Maybe not the unlucky wraths from Force Hand of Fate?
+          AP.Config.Clicking.ShimmerTypes == 2) {  // FIXME, Maybe not the unlucky wraths from Force Hand of Fate?
 
         // Move the mouse to the right position, then pop the shimmer
         r = shimmer.l.getBoundingClientRect();
@@ -186,10 +186,10 @@ AP.popOne = function() {
 }
 
 AP.ShimmerAppeared = function() {
-  if (AP.Config.ShimmerClicking == 1) {
+  if (AP.Config.Clicking.ShimmerWhen == 1) {
     min = 1000 * (1 + Game.shimmers[Game.shimmers.length-1].dur / 12);
     max = min + 4000;
-  } else if (AP.Config.ShimmerClicking == 2) {
+  } else if (AP.Config.Clicking.ShimmerWhen == 2) {
     min = 1000 * (1 + Game.shimmers[Game.shimmers.length-1].dur / 12);
     max = 1000 * (1 + Game.shimmers[Game.shimmers.length-1].life / Game.fps);
   }
@@ -354,7 +354,8 @@ AP.compute_spell_factors = function(just_determining_bank_buffer) {
 
   // If user doesn't want auto-clicking, then Force Hand of Fate has little
   // or no value.  Also, if we don't have enough wizard towers.
-  if (AP.Config.BigCookieClicks == 0 || AP.buildingMax["Wizard tower"] < 21) {
+  if (AP.Config.Clicking.BigCookie == 0 ||
+      AP.buildingMax["Wizard tower"] < 21) {
     fhof_factor = 0;
   } else {
     has_ruin = (Game.hasGod && Game.hasGod("ruin"))
@@ -665,7 +666,7 @@ AP.adjustTowers = function(sell_until_equal) {
 AP.castASpell = function() {
   action_taken = true;
   grimoire = Game.Objects["Wizard tower"].minigame;
-  if (AP.Config.GrimoireSpellcasting &&
+  if (AP.Config.Minigames.SpellCasting &&
       AP.spell_factors['best'] == 'se' &&
       grimoire.magic == grimoire.magicM &&
       grimoire.magic >= 77) {
@@ -792,7 +793,7 @@ AP.sellBuilding = function(bldg, num) { // Use num == -1 to sell all
 }
 
 AP.getSpontaneousEdificeBonus = function(item, price) {
-  if (!AP.Config.GrimoireSpellcasting)
+  if (!AP.Config.Minigames.SpellCasting)
     return 0;
 
   M = 0;
@@ -1036,16 +1037,16 @@ AP.determinePatientBankBuffer = function(item_pp) {
 
 AP.determineBankBuffer = function(item_pp) {
   // FIXME: Code for bank buffer with spontaneous edifice should move here too
-  if (AP.Config.AutoPurchase == 1)
+  if (AP.Config.Purchase.When == 1)
     return 0;
-  else if (AP.Config.AutoPurchase == 2)
+  else if (AP.Config.Purchase.When == 2)
     // Save 5 minutes of CpS per log_100(CpS), technically maxing out at
     // 105 minutes (== 7*15), though it's really hard to hit that max
     return 300 * AP.trueCpS * Math.min(21, 0.5*Math.log10(AP.trueCpS))
-  else if (AP.Config.AutoPurchase == 3)
+  else if (AP.Config.Purchase.When == 3)
     return AP.determinePatientBankBuffer(item_pp);
 
-  console.error(`Invalid AP.Config.AutoPurchase value of ${AP.Config.AutoPurchase} in AP.determineBankBuffer`);
+  console.error(`Invalid AP.Config.Purchase.When value of ${AP.Config.Purchase.When} in AP.determineBankBuffer`);
 }
 
 AP.determineBestSpontaneousPurchase = function() {
@@ -1317,51 +1318,63 @@ AP.ConfigInit = function() {
   AP.ConfigPrefix = 'APConfig';
 
   AP.Config = { // See AP.ConfigData for meanings
-    GlobalEnable: 0,
-    AutoPurchaseTypes: 3,
-    AutoPurchase: 3,
-    BigCookieClicks: 1,
-    ShimmerTypes: 1,
-    ShimmerClicking: 1,
-    GrimoireSpellcasting: 1,
+    Global: {
+      Enable: 0,
+    },
+    Purchase: {
+      Types: 3,
+      When: 3,
+    },
+    Clicking: {
+      BigCookie: 1,
+      ShimmerTypes: 1,
+      ShimmerWhen: 1,
+    },
+    Minigames: {
+      SpellCasting: 1,
+    }
   };
-  AP.ConfigData.GlobalEnable = {
+  AP.ConfigData.Global = {};
+  AP.ConfigData.Global.Enable = {
     label: ['Disabled',
             'Enabled'],
     desc: 'Whether AutoPlay is enabled; if not, options below are irrelevant'
     };
-  AP.ConfigData.AutoPurchaseTypes = {
+  AP.ConfigData.Purchase = {};
+  AP.ConfigData.Purchase.Types = {
     label: ['None',
             'Just Buildings',
             'Just Upgrades & Research',
             'Buildings & Upgrades & Research'],
     desc: 'Types of purchases to automatically make',
     };
-  AP.ConfigData.AutoPurchase = {
+  AP.ConfigData.Purchase.When = {
     label: ['Never',
             'As soon as I have enough money',
             'Leave a little buffer',
             'Patience, grasshopper'],
     desc: 'Automatic purchase timing for buildings and upgrades',
     };
-  AP.ConfigData.BigCookieClicks = {
+  AP.ConfigData.Clicking = {}
+  AP.ConfigData.Clicking.BigCookie = {
     label: ['Never',
             'Only during click specials'],
     desc: 'When to automatically click the big cookie',
     };
-  AP.ConfigData.ShimmerTypes = {
+  AP.ConfigData.Clicking.ShimmerTypes = {
     label: ["I'll click my own shimmers",
             'Not them wrath cookies!',
             'Click all the things!'],
     desc: 'Shimmer types (golden/wrath cookies, reindeer) to autoclick',
     };
-  AP.ConfigData.ShimmerClicking = {
+  AP.ConfigData.Clicking.ShimmerWhen = {
     label: ['Never',
             'When they show up',
             'Eh, whenever'],
     desc: 'When to autoclick shimmers (golden/wrath cookies, reindeer)',
     };
-  AP.ConfigData.GrimoireSpellcasting = {
+  AP.ConfigData.Minigames = {};
+  AP.ConfigData.Minigames.SpellCasting = {
     label: ['Disable',
             'Enable'],
     desc: 'Automatically cast spells from the Grimoire minigame',
@@ -1369,11 +1382,12 @@ AP.ConfigInit = function() {
 }
 
 AP.ToggleConfig = function(config) {
-  AP.Config[config]++;
-  if (AP.Config[config] == AP.ConfigData[config].label.length)
-    AP.Config[config] = 0;
+  [group, setting] = config.split('.')
+  AP.Config[group][setting]++;
+  if (AP.Config[group][setting] == AP.ConfigData[group][setting].label.length)
+    AP.Config[group][setting] = 0;
   l(AP.ConfigPrefix + config).innerHTML =
-    AP.ConfigData[config].label[AP.Config[config]];
+    AP.ConfigData[group][setting].label[AP.Config[group][setting]];
 }
 
 AP.AddMenuPref = function() {
@@ -1390,41 +1404,43 @@ AP.AddMenuPref = function() {
     a.className = 'option';
     a.id = AP.ConfigPrefix + config;
     a.onclick = function() {AP.ToggleConfig(config);};
-    a.textContent = AP.ConfigData[config].label[AP.Config[config]];
+    [group, setting] = config.split('.')
+    config_setting = AP.Config[group][setting];
+    a.textContent = AP.ConfigData[group][setting].label[config_setting];
     div.appendChild(a);
     var label = document.createElement('label');
-    label.textContent = AP.ConfigData[config].desc;
+    label.textContent = AP.ConfigData[group][setting].desc;
     div.appendChild(label);
     return div;
   }
 
-  new_menu.appendChild(listing('GlobalEnable'));
-  new_menu.appendChild(listing('AutoPurchaseTypes'));
-  new_menu.appendChild(listing('AutoPurchase'));
-  new_menu.appendChild(listing('BigCookieClicks'));
-  new_menu.appendChild(listing('ShimmerTypes'));
-  new_menu.appendChild(listing('ShimmerClicking'));
-  new_menu.appendChild(listing('GrimoireSpellcasting'));
+  new_menu.appendChild(listing('Global.Enable'));
+  new_menu.appendChild(listing('Purchase.Types'));
+  new_menu.appendChild(listing('Purchase.When'));
+  new_menu.appendChild(listing('Clicking.BigCookie'));
+  new_menu.appendChild(listing('Clicking.ShimmerTypes'));
+  new_menu.appendChild(listing('Clicking.ShimmerWhen'));
+  new_menu.appendChild(listing('Minigames.SpellCasting'));
 
   l('menu').childNodes[2].insertBefore(new_menu, l('menu').childNodes[2].childNodes[l('menu').childNodes[2].childNodes.length - 1]);
 }
 
 AP.Options.doSomePurchases = function() {
-  return AP.Config.GlobalEnable != 0 &&
-    AP.Config.AutoPurchaseTypes != 0 && AP.Config.AutoPurchase != 0;
+  return AP.Config.Global.Enable != 0 &&
+    AP.Config.Purchase.Types != 0 && AP.Config.Purchase.When != 0;
 }
 
 AP.Options.purchaseBuildings = function() {
-  return AP.Config.GlobalEnable != 0 && (AP.Config.AutoPurchaseTypes & 1);
+  return AP.Config.Global.Enable != 0 && (AP.Config.Purchase.Types & 1);
 }
 
 AP.Options.purchaseUpgrades = function() {
-  return AP.Config.GlobalEnable != 0 && (AP.Config.AutoPurchaseTypes & 2);
+  return AP.Config.Global.Enable != 0 && (AP.Config.Purchase.Types & 2);
 }
 
 AP.Options.clickSomeShimmers = function() {
-  return AP.Config.GlobalEnable != 0 &&
-    AP.Config.ShimmerTypes != 0 && AP.Config.ShimmerClicking != 0;
+  return AP.Config.Global.Enable != 0 &&
+    AP.Config.Clicking.ShimmerTypes != 0 && AP.Config.Clicking.ShimmerWhen != 0;
 }
 
 /*** Monkey patching and initialization ***/
