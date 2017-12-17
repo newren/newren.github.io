@@ -91,7 +91,7 @@ AP.doClicking = function() {
   AP.recomputeBuffs();
 
   // Check if we can boost our click power by buying and selling buildings
-  if (AP.usage.spiritOfRuin == 2 && AP.spiritOfRuinActions()) {
+  if (AP.spiritOfRuinActions()) {
     // Buying and selling buildings and simultaneously clicking on the big
     // cookie isn't something a human would be able to do, so just return
     // early.
@@ -109,7 +109,7 @@ AP.doClicking = function() {
     // that we sometimes like to click a few extra times after the buff ends,
     // to mimic how a human would behave.
     if (!AP.clickingNeeded() && Math.random() < 1/3) {
-      if (AP.usage.spiritOfRuin < 2)
+      if (!AP.Options.buffDevastation())
         AP.clearClickInterval();
       else
         AP.spiritOfRuinTimeToBuyBack = true;
@@ -200,6 +200,10 @@ AP.ShimmerAppeared = function() {
 
 AP.spiritOfRuinActions = function(preclick) {
   action_taken = true;
+
+  // If we're not buffing Devastation, then there's no action to take
+  if (!AP.Options.buffDevastation())
+    return !action_taken;
 
   // When the buff ends, we need to finish our last few unbuffed clicks before
   // buying back the buildings
@@ -362,7 +366,7 @@ AP.compute_spell_factors = function(just_determining_bank_buffer) {
 
     // Which is better: conjuring baked goods or forcing the hand of fate?
     ruin_mult = 1;
-    if (has_ruin && AP.usage.spiritOfRuin == 2) {
+    if (AP.Options.buffDevastation()) {
       slot = has_ruin; // Game.hasGod returns which slot if it's in one
       ruin_factor = .01 * Math.pow(2, 1-slot);
       ruin_mult += ruin_factor * Game.Objects.Cursor.amount;
@@ -428,9 +432,9 @@ AP.compute_spell_factors = function(just_determining_bank_buffer) {
   // With 77 magic, we can cast se 1 time.
   //   Those three values are close enough to equal that I'll just use 5,2,1
   factors = {
-    'cbg'  : (AP.usage.grimoire == 2 ? 5 : 1) * cbg_factor,
-    'fhof' : (AP.usage.grimoire == 2 ? 2 : 1) * fhof_factor,
-    'se'   :                                    se_factor
+    'cbg'  : (AP.Options.adjustTowers() ? 5 : 1) * cbg_factor,
+    'fhof' : (AP.Options.adjustTowers() ? 2 : 1) * fhof_factor,
+    'se'   :                                       se_factor
   };
   best = 'cbg'; best_factor = factors['cbg']
   for (key in factors) {
@@ -467,7 +471,7 @@ AP.handleSpellAdjustments = function(original_buff, min_buff_time_overlap,
     return action_taken;
 
   // Sell towers until we have the right amount
-  if (AP.usage.grimoire == 2 && grimoire.magic < grimoire.magicM) {
+  if (AP.Options.adjustTowers() && grimoire.magic < grimoire.magicM) {
     mf = Math.floor(grimoire.magic);
     sell_until_exact = (Math.floor(factor*mf) < Math.floor(factor*(mf+1)))
     if (AP.adjustTowers(sell_until_exact))
@@ -477,7 +481,7 @@ AP.handleSpellAdjustments = function(original_buff, min_buff_time_overlap,
   // Add a simple delay between tower selling and casting whatever spell.
   // Probably could be done better with delay tokens than random numbers,
   // but whatever...
-  if (AP.usage.grimoire == 2 && Math.random() < 2/3)
+  if (AP.Options.adjustTowers() && Math.random() < 2/3)
     return action_taken; // Wait until interval firing this function fires again
 
   return !action_taken;
@@ -487,7 +491,8 @@ AP.conjureBakedGoods = function(original_buff) {
   grimoire = Game.Objects["Wizard tower"].minigame;
   min_overlap = 8;
   factor = (Game.buffs["Magic adept"] ? .4 : .2);
-  min_magic = (AP.usage.grimoire == 2 ? 4 : Math.floor(2 + .4*grimoire.magicM));
+  min_magic = (AP.Options.adjustTowers() ? 4
+                                         : Math.floor(2 + .4*grimoire.magicM));
   if (AP.handleSpellAdjustments(original_buff, min_overlap, min_magic, factor))
     return;
 
@@ -509,7 +514,7 @@ AP.conjureBakedGoods = function(original_buff) {
   // If not selling wizard towers, we want to wait until the buff is nearly
   // over, since we'll only get one shot and would like to let magic refill
   // when we're further from being fully depleted.
-  if (AP.usage.grimoire < 2) {
+  if (!AP.Options.adjustTowers()) {
     time_left = Math.min(AP.currentBuffTimeLeft,
                          Game.buffs["Magic adept"].time/Game.fps);
     if (time_left > 20)
@@ -539,7 +544,8 @@ AP.forceHandOfFate = function(original_buff) {
   // Adjust towers as needed
   grimoire = Game.Objects["Wizard tower"].minigame;
   min_overlap = 25; /* Includes waiting for GC to appear & time to click it */
-  min_magic = (AP.usage.grimoire == 2 ? 23 : Math.floor(10+.6*grimoire.magicM));
+  min_magic = (AP.Options.adjustTowers() ? 23
+                                         : Math.floor(10+.6*grimoire.magicM));
   if (Game.Has("Get lucky") && AP.currentNumBuffs < 2)
     min_magic = 68
   if (AP.handleSpellAdjustments(original_buff, min_overlap, min_magic, .6))
@@ -574,7 +580,7 @@ AP.handleSpellsDuringBuffs = function() {
   factors = AP.compute_spell_factors(0);
   if (factors['best'] == 'cbg') {
     // Do we have enough to cast diminish ineptitude and conjure baked goods?
-    if (AP.usage.grimoire == 2) {
+    if (AP.Options.adjustTowers()) {
       if (grimoire.magic < 11)
         return;
     } else if (grimoire.magicM < 13)
@@ -614,7 +620,7 @@ AP.adjustTowers = function(sell_until_equal) {
   action_taken = true;
   difference_allowed = (sell_until_equal ? 0 : 1);
 
-  if (AP.usage.grimoire != 2)
+  if (!AP.Options.adjustTowers())
     return !action_taken;
 
   if (AP.clickingNeeded()) {
@@ -776,11 +782,6 @@ AP.buyBuilding = function(bldg, num) {
   Game.Objects[bldg].buy(num);
   Game.buyMode = oldMode;
   Game.Objects[bldg].refresh();
-
-  if (bldg == 'Cursor')
-    AP.ruinCursors = Math.max(AP.ruinCursors, Game.Objects[bldg].amount);
-  else if (bldg == "Wizard tower")
-    AP.grimoireTowers = Math.max(AP.grimoireTowers, Game.Objects[bldg].amount);
 }
 
 AP.sellBuilding = function(bldg, num) { // Use num == -1 to sell all
@@ -908,17 +909,14 @@ AP.getCheapItem = function(item, price) {
 }
 
 AP.itemLimitsForMinigames = function(item, price) {
-  if (AP.usage.spiritOfRuin > 0 && item === "Cursor" &&
-      Game.Objects.Cursor.amount >= 100 && price > 1*AP.trueCpS) {
+  if (item === "Cursor" &&
+      AP.Options.buffDevastation() &&
+      price > 1*AP.trueCpS) {
     return Number.MAX_VALUE;
-  } else if (AP.usage.grimoire > 0 && item === "Wizard tower") {
-    if (AP.usage.grimoire == 2)
-      // Only buy towers to increase magic (done elsewhere), not because of
-      // cookie generation
-      return Number.MAX_VALUE;
-    // At this point, AP.usage.grimoire == 1
-    if (Game.Objects["Wizard tower"].amount >= 55 && price > 1*AP.trueCpS)
-      return Number.MAX_VALUE;
+  } else if (item === "Wizard tower" && AP.Options.adjustTowers()) {
+    // Only buy towers to increase magic (done elsewhere), not because of
+    // cookie generation
+    return Number.MAX_VALUE;
   }
   return 0;
 }
@@ -1218,62 +1216,6 @@ AP.handleActions = function() {
   // Nothing to do this interval.  Maybe there will be next time.
 }
 
-/*** Code dealing with whether we should turn on "unusual" usage strategies **/
-
-AP.checkUnusualUsageStrategies = function() {
-  // AP.usage is for strategies that are either temporarily negative or are
-  // outright negative in specific facets but which may have benefits that
-  // outweigh the negatives, IF people aren't shocked/surprised and take
-  // action that circumvents the strategies (an all too likely occurrence
-  // that could exacerbate the negatives).  Even if they don't do anything
-  // amiss, the surprise factor itself could be too much of a shock.  So don't
-  // turn these on full unless it's clear the user wants them, and turn them
-  // back off if they take steps that would make the negatives too big.
-
-  if (Game.resets == 0)
-    return;
-
-  // Levels, for both spiritOfRuin and grimoire:
-  //   2: Take full advantage; buy/sell/rebuy buildings with abandon
-  //   1: Avoid buying too many of certain buildings so it won't be painful
-  //      to employ the strategy later, but don't actually sell the buildings.
-  //   0: Don't limit building purchases based on these strategies, and don't
-  //      ever sell buildings for these either.
-  if (Game.resets > 0 && Game.lastResets == 0) {
-    AP.usage.spiritOfRuin = 1;
-    AP.usage.grimoire =     1;
-  }
-
-  // First, handling of the spirit of ruin
-  cursor_amount = Game.Objects.Cursor.amount
-  if (Game.hasGod && Game.hasGod("ruin") && Game.Objects.Mine.amount >= 5) {
-    if (cursor_amount > 100 && cursor_amount > AP.ruinCursors) {
-      AP.usage.spiritOfRuin = 0;
-    }
-    if (cursor_amount == 0 && AP.buildingMax.Cursor > 100) {
-      AP.usage.spiritOfRuin = 2;
-      AP.ruinCursors = 0;
-    }
-  }
-
-  // Second, handling grimoire
-  tower_amount = Game.Objects["Wizard tower"].amount
-  if (AP.buildingMax["Wizard tower"] == 100 + tower_amount ||
-      AP.buildingMax["Wizard tower"] == 200 + tower_amount)
-    // We don't want Krumblor sacrifices to trigger this behavior.
-    AP.buildingMax["Wizard tower"] = tower_amount
-  grimoire = Game.Objects["Wizard tower"].minigame;
-  if (grimoire && Game.Objects.Portal.amount >= 5) {
-    if (tower_amount > 55 && tower_amount > AP.grimoireTowers) {
-      AP.usage.grimoire = 0;
-    }
-    if (tower_amount < AP.buildingMax["Wizard tower"] - 1) {
-      AP.usage.grimoire = 2;
-      AP.grimoireTowers = tower_amount;
-    }
-  }
-}
-
 /*** Miscellaneous functions ***/
 
 AP.Interval = function(lower, upper) {
@@ -1331,7 +1273,10 @@ AP.ConfigInit = function() {
       ShimmerWhen: 1,
     },
     Minigames: {
+      AdjustPantheon: 1,
+      BuffDevastation: 1,
       SpellCasting: 1,
+      AdjustTowers: 1,
     }
   };
   AP.ConfigData.Global = {};
@@ -1443,6 +1388,18 @@ AP.Options.clickSomeShimmers = function() {
     AP.Config.Clicking.ShimmerTypes != 0 && AP.Config.Clicking.ShimmerWhen != 0;
 }
 
+AP.Options.buffDevastation = function() {
+  return AP.Config.Minigames.buffDevastation != 0 &&
+         Game.hasGod && Game.hasGod("ruin") &&
+         AP.buildingMax.Cursor > 100;
+}
+
+AP.Options.adjustTowers = function() {
+  return AP.Config.Minigames.AdjustTowers != 0 &&
+         Game.Objects["Wizard tower"].minigame &&
+         AP.buildingMax["Wizard tower"] > 55;
+}
+
 /*** Monkey patching and initialization ***/
 
 AP.shimmerFunction = function(url) {
@@ -1458,7 +1415,6 @@ AP.RemakePP = function() {
   AP.Backup.RemakePP();
 
   AP.recomputeBuffs();
-  AP.checkUnusualUsageStrategies();
   AP.spell_factors = AP.compute_spell_factors(1);
   AP.handleActions();
 }
@@ -1523,12 +1479,6 @@ AP.Init = function() {
   AP.interval = {}
   AP.logHandOfFateCookie = false;
   AP.lastResets = Game.resets - 1;
-
-  AP.usage = {};
-  AP.usage.spiritOfRuin = (Game.resets > 0 ? 1 : 0);
-  AP.usage.grimoire =     (Game.resets > 0 ? 1 : 0);
-  AP.ruinCursors = 0;
-  AP.grimoireTowers = 0;
 
   AP.bulk_cost_factor = [AP.costToPurchase(10, 1), AP.costToPurchase(100, 1)];
 
