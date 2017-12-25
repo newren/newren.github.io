@@ -286,6 +286,9 @@ AP.spiritOfRuinActions = function(preclick) {
 AP.adjustPantheon = function() {
   pantheon_adjusted = true;
 
+  if (!AP.Config.Minigames.AdjustPantheon)
+    return !pantheon_adjusted;
+
   pantheon = Game.Objects.Temple.minigame
   if (pantheon && pantheon.swaps == 3) {
     // Determine where we want this spirit
