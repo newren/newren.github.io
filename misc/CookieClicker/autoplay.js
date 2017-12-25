@@ -1203,8 +1203,6 @@ AP.handleActions = function() {
   // Don't buy upgrades or buildings while in a clickfest or adjusting towers
   if (AP.clickInterval || AP.towerInterval) {
     return;
-  } else if (AP.Options.doSomePurchases() && AP.handlePurchases()) {
-    return;
   } else if (AP.adjustTowers()) {
     // One adjustment usually isn't enough; make sure we keep adjusting until
     // it's up or down to the right value
@@ -1213,6 +1211,8 @@ AP.handleActions = function() {
   } else if (AP.adjustPantheon()) {
     return;
   } else if (AP.castASpell()) {
+    return;
+  } else if (AP.Options.doSomePurchases() && AP.handlePurchases()) {
     return;
   }
 
