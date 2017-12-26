@@ -1203,7 +1203,9 @@ AP.handleActions = function() {
   // Don't buy upgrades or buildings while in a clickfest or adjusting towers
   if (AP.clickInterval || AP.towerInterval) {
     return;
-  } else if (AP.adjustTowers()) {
+  } else if ((AP.spell_factors['best'] == 'cbg' ||
+              AP.spell_factors['best'] == 'fhof') &&
+             AP.adjustTowers()) {
     // One adjustment usually isn't enough; make sure we keep adjusting until
     // it's up or down to the right value
     AP.towerInterval = setInterval(AP.adjustTowers, 200);
