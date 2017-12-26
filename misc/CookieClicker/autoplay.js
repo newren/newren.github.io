@@ -785,9 +785,18 @@ AP.buyBuilding = function(bldg, num) {
   Game.Objects[bldg].buy(num);
   Game.buyMode = oldMode;
   Game.Objects[bldg].refresh();
+
+  // Recompute the max number of buildings.
+  AP.buildingMax[bldg] = Math.max(
+    AP.buildingMax[bldg], Game.Objects[bldg].amount);
 }
 
 AP.sellBuilding = function(bldg, num) { // Use num == -1 to sell all
+  // It's possible a user bought some buildings before we go to sell.  So,
+  // recompute the max here too.
+  AP.buildingMax[bldg] = Math.max(
+    AP.buildingMax[bldg], Game.Objects[bldg].amount);
+
   // Unlike .buy(), sell() is more sane; it doesn't look at buyMode to
   // decide whether to invert the meaning and switch between buying and
   // selling behind the user's back, so no need to temporarily toggle
@@ -1180,12 +1189,6 @@ AP.handlePurchases = function() {
   } else {
     purchaseMade = false;
   }
-
-  // Record the new maximum number of buildings (which could have changed due
-  // to the user buying since we last ran or by our purchasing above)
-  for (bldg in Game.Objects)
-    AP.buildingMax[bldg] = Math.max(
-      AP.buildingMax[bldg], Game.Objects[bldg].amount);
 
   return purchaseMade;
 }
