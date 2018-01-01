@@ -724,6 +724,7 @@ AP.harvestLumps = function() {
   order_slot = (Game.hasGod && Game.hasGod("order"));
   if (order_slot &&
       Game.BuildingsOwned % 10 != 0 &&
+      AP.Config.Minigames.AdjustCursors &&
       Game.Objects["Cursor"].amount > 10) {
     time_off = 20*60*1000 * (4-order_slot); // 20 minutes * (4-order_slot)
     if (Date.now() - Game.lumpT > Game.lumpRipeAge - time_off) {
@@ -1311,7 +1312,7 @@ AP.ConfigInit = function() {
     },
     Minigames: {
       AdjustPantheon: 1,
-      BuffDevastation: 1,
+      AdjustCursors: 1,
       SpellCasting: 1,
       AdjustTowers: 1,
     }
@@ -1356,10 +1357,25 @@ AP.ConfigInit = function() {
     desc: 'When to autoclick shimmers (golden/wrath cookies, reindeer)',
     };
   AP.ConfigData.Minigames = {};
+  AP.ConfigData.Minigames.AdjustPantheon = {
+    label: ['Disable',
+            'Enable'],
+    desc: 'Automatically adjust slots in the Pantheon minigame',
+    };
+  AP.ConfigData.Minigames.AdjustCursors = {
+    label: ['Disable',
+            'Enable'],
+    desc: 'Automatically adjust cursors to take advantage of pantheon effects',
+    };
   AP.ConfigData.Minigames.SpellCasting = {
     label: ['Disable',
             'Enable'],
     desc: 'Automatically cast spells from the Grimoire minigame',
+    };
+  AP.ConfigData.Minigames.AdjustTowers = {
+    label: ['Disable',
+            'Enable'],
+    desc: 'Automatically adjust towers to make spell casting easier',
     };
 }
 
@@ -1416,7 +1432,10 @@ AP.AddMenuPref = function() {
   new_menu.appendChild(listing('Clicking.ShimmerTypes'));
   new_menu.appendChild(listing('Clicking.ShimmerWhen'));
   new_menu.appendChild(header('Minigames'));
+  new_menu.appendChild(listing('Minigames.AdjustPantheon'));
+  new_menu.appendChild(listing('Minigames.AdjustCursors'));
   new_menu.appendChild(listing('Minigames.SpellCasting'));
+  new_menu.appendChild(listing('Minigames.AdjustTowers'));
 
   l('menu').childNodes[2].insertBefore(new_menu, l('menu').childNodes[2].childNodes[l('menu').childNodes[2].childNodes.length - 1]);
 }
@@ -1440,7 +1459,7 @@ AP.Options.clickSomeShimmers = function() {
 }
 
 AP.Options.buffDevastation = function() {
-  return AP.Config.Minigames.buffDevastation != 0 &&
+  return AP.Config.Minigames.AdjustCursors != 0 &&
          Game.hasGod && Game.hasGod("ruin") &&
          AP.buildingMax.Cursor > 100;
 }
