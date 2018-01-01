@@ -712,9 +712,24 @@ AP.castASpell = function() {
 
 AP.harvestLumps = function() {
   action_taken = true;
+
+  // If a lump is ripe, harvest it now
   if (Date.now() - Game.lumpT > Game.lumpRipeAge) {
     Game.clickLump();
     return action_taken;
+  }
+
+  // If Rigidel slotted but inactive, and the lump would be ripe if Rigidel
+  // effect was active, then sell off cursors to make it active.
+  order_slot = (Game.hasGod && Game.hasGod("order"));
+  if (order_slot &&
+      Game.BuildingsOwned % 10 != 0 &&
+      Game.Objects["Cursor"].amount > 10) {
+    time_off = 20*60*1000 * (4-order_slot); // 20 minutes * (4-order_slot)
+    if (Date.now() - Game.lumpT > Game.lumpRipeAge - time_off) {
+      AP.sellBuilding('Cursor', 1);
+      return action_taken;
+    }
   }
 
   return !action_taken;
