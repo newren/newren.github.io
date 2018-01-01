@@ -713,6 +713,9 @@ AP.castASpell = function() {
 AP.harvestLumps = function() {
   action_taken = true;
 
+  if (!AP.Config.Minigames.HarvestSugarLumps)
+    return !action_taken;
+
   // If a lump is ripe, harvest it now
   if (Date.now() - Game.lumpT > Game.lumpRipeAge) {
     Game.clickLump();
@@ -1311,18 +1314,21 @@ AP.ConfigInit = function() {
       ShimmerWhen: 1,
     },
     Minigames: {
+      HarvestSugarLumps: 1,
       AdjustPantheon: 1,
       AdjustCursors: 1,
       SpellCasting: 1,
       AdjustTowers: 1,
     }
   };
+
   AP.ConfigData.Global = {};
   AP.ConfigData.Global.Enable = {
     label: ['Disabled',
             'Enabled'],
     desc: 'Whether AutoPlay is enabled; if not, options below are irrelevant'
     };
+
   AP.ConfigData.Purchase = {};
   AP.ConfigData.Purchase.Types = {
     label: ['None',
@@ -1338,6 +1344,7 @@ AP.ConfigInit = function() {
             'Patience, grasshopper'],
     desc: 'Automatic purchase timing for buildings and upgrades',
     };
+
   AP.ConfigData.Clicking = {}
   AP.ConfigData.Clicking.BigCookie = {
     label: ['Never',
@@ -1356,7 +1363,13 @@ AP.ConfigInit = function() {
             'Eh, whenever'],
     desc: 'When to autoclick shimmers (golden/wrath cookies, reindeer)',
     };
+
   AP.ConfigData.Minigames = {};
+  AP.ConfigData.Minigames.HarvestSugarLumps = {
+    label: ['Disable',
+            'Enable'],
+    desc: 'Automatically harvest sugar lumps when ripe',
+    };
   AP.ConfigData.Minigames.AdjustPantheon = {
     label: ['Disable',
             'Enable'],
@@ -1432,6 +1445,7 @@ AP.AddMenuPref = function() {
   new_menu.appendChild(listing('Clicking.ShimmerTypes'));
   new_menu.appendChild(listing('Clicking.ShimmerWhen'));
   new_menu.appendChild(header('Minigames'));
+  new_menu.appendChild(listing('Minigames.HarvestSugarLumps'));
   new_menu.appendChild(listing('Minigames.AdjustPantheon'));
   new_menu.appendChild(listing('Minigames.AdjustCursors'));
   new_menu.appendChild(listing('Minigames.SpellCasting'));
