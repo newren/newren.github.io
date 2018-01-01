@@ -708,6 +708,18 @@ AP.castASpell = function() {
   return !action_taken;
 }
 
+/*** Lump harvesting ***/
+
+AP.harvestLumps = function() {
+  action_taken = true;
+  if (Date.now() - Game.lumpT > Game.lumpRipeAge) {
+    Game.clickLump();
+    return action_taken;
+  }
+
+  return !action_taken;
+}
+
 /*** Figuring out expected time ***/
 
 AP.expectedTimeUntil = function(gcevent) {
@@ -1216,6 +1228,8 @@ AP.handleActions = function() {
   } else if (AP.adjustPantheon()) {
     return;
   } else if (AP.castASpell()) {
+    return;
+  } else if (AP.harvestLumps()) {
     return;
   } else if (AP.Options.doSomePurchases() && AP.handlePurchases()) {
     return;
