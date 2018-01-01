@@ -1379,6 +1379,17 @@ AP.AddMenuPref = function() {
   title.textContent = 'Cookie Clicker AutoPlay';
   new_menu.appendChild(title);
 
+  var header = function(text) {
+    var div = document.createElement('div');
+    div.className = 'listing';
+    div.style.padding = '5px 16px';
+    div.style.opacity = '0.7';
+    div.style.fontSize = '17px';
+    div.style.fontFamily = '\"Kavoon\", Georgia, serif';
+    div.textContent = text;
+    return div;
+  }
+
   var listing = function(config) {
     var div = document.createElement('div');
     div.className = 'listing';
@@ -1397,11 +1408,14 @@ AP.AddMenuPref = function() {
   }
 
   new_menu.appendChild(listing('Global.Enable'));
+  new_menu.appendChild(header('Purchase Decisions'));
   new_menu.appendChild(listing('Purchase.Types'));
   new_menu.appendChild(listing('Purchase.When'));
+  new_menu.appendChild(header('Auto-clicking'));
   new_menu.appendChild(listing('Clicking.BigCookie'));
   new_menu.appendChild(listing('Clicking.ShimmerTypes'));
   new_menu.appendChild(listing('Clicking.ShimmerWhen'));
+  new_menu.appendChild(header('Minigames'));
   new_menu.appendChild(listing('Minigames.SpellCasting'));
 
   l('menu').childNodes[2].insertBefore(new_menu, l('menu').childNodes[2].childNodes[l('menu').childNodes[2].childNodes.length - 1]);
