@@ -283,6 +283,48 @@ AP.spiritOfRuinActions = function(preclick) {
   return !action_taken;
 }
 
+AP.slotCyclius = function() {
+  pantheon_adjusted = true;
+  pantheon = Game.Objects.Temple.minigame
+
+  // Determine where we want this spirit
+  value = Math.floor((Date.now() % 86400000) / 7200000)
+
+  cyclius = pantheon.gods["ages"].id
+  slot1available = (pantheon.slot[1] == -1) || (pantheon.slot[1] == cyclius)
+  slot2available = (pantheon.slot[2] == -1) || (pantheon.slot[2] == cyclius)
+
+  desiredSlot = false;
+  if (value <= 1 && slot1available && slot2available)
+    desiredSlot = 2
+  else if (value <= 5 && slot2available)
+    desiredSlot = 3
+  else if (value % 6 <= 2 && slot1available)
+    desiredSlot = 2
+
+  // Exit if we don't have him and don't want him.
+  if (!desiredSlot && !Game.hasGod('ages'))
+    return !pantheon_adjusted;
+
+  // Exit if we need to use a swap but aren't full
+  if (desiredSlot > 0 && pantheon.swaps < 3)
+    return !pantheon_adjusted;
+
+  // Put Cyclius into the desired slot, if not already there
+  if (Game.hasGod('ages') != desiredSlot) {
+    pantheon.dragGod(pantheon.gods.ages);
+    // slots used are 0-2, even though hasGod returns 1-3.
+    // Also, kinda lame to get -1 from "false-1", but it works...
+    pantheon.hoverSlot(desiredSlot-1);
+    pantheon.dropGod();
+    console.log(`Moved Cyclius into slot ${desiredSlot} `+
+                `at ${Date().toString()}`)
+    return pantheon_adjusted;
+  }
+
+  return !pantheon_adjusted;
+}
+
 AP.adjustPantheon = function() {
   pantheon_adjusted = true;
 
@@ -290,38 +332,11 @@ AP.adjustPantheon = function() {
     return !pantheon_adjusted;
 
   pantheon = Game.Objects.Temple.minigame
-  if (pantheon && pantheon.swaps == 3) {
-    // Determine where we want this spirit
-    value = Math.floor((Date.now() % 86400000) / 7200000)
+  if (!pantheon)
+    return !pantheon_adjusted;
 
-    cyclius = pantheon.gods["ages"].id
-    slot1available = (pantheon.slot[1] == -1) || (pantheon.slot[1] == cyclius)
-    slot2available = (pantheon.slot[2] == -1) || (pantheon.slot[2] == cyclius)
-
-    desiredSlot = false;
-    if (value <= 1 && slot1available && slot2available)
-      desiredSlot = 2
-    else if (value <= 5 && slot2available)
-      desiredSlot = 3
-    else if (value % 6 <= 2 && slot1available)
-      desiredSlot = 2
-
-    // Exit if we don't have him and don't want him.
-    if (!desiredSlot && !Game.hasGod('ages'))
-      return !pantheon_adjusted;
-
-    // Put Cyclius into the desired slot, if not already there
-    if (Game.hasGod('ages') != desiredSlot) {
-      pantheon.dragGod(pantheon.gods.ages);
-      // slots used are 0-2, even though hasGod returns 1-3.
-      // Also, kinda lame to get -1 from "false-1", but it works...
-      pantheon.hoverSlot(desiredSlot-1);
-      pantheon.dropGod();
-      console.log(`Moved Cyclius into slot ${desiredSlot} `+
-                  `at ${Date().toString()}`)
-      return pantheon_adjusted;
-    }
-  }
+  if (AP.slotCyclius())
+    return pantheon_adjusted;
 
   return !pantheon_adjusted;
 }
