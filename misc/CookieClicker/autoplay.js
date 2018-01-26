@@ -283,6 +283,52 @@ AP.spiritOfRuinActions = function(preclick) {
   return !action_taken;
 }
 
+AP.slotSelebrakOrVomitrax = function() {
+  pantheon_adjusted = true;
+  pantheon = Game.Objects.Temple.minigame
+
+  // If we have "Get lucky" but not "Lasting fortune", then the overlap
+  // between Frenzy and BSorDH often isn't quite long enough causing us to
+  // miss lots of opportunities to cast FHofF or CBG.  So, in such cases,
+  // despite the small penalty to building production, use vomitrax in order
+  // to extend the overlap.  In all other cases, use Selebrak to avoid the
+  // building penalty while still increasing the overlap a little bit.  Also,
+  // Selebrak helps find christmas/easter/halloween cookies/eggs.
+  desired = 'seasons'
+  if (Game.Has("Get lucky") && !Game.Has("Lasting fortune"))
+    desired = "decadence"
+
+  // Put Selebrak into the desired slot, if not already there
+  if (pantheon.swaps == 3 && Game.hasGod(desired) != 2) {
+    pantheon.dragGod(pantheon.gods[desired]);
+    // slots used are 0-2, even though hasGod returns 1-3.
+    pantheon.hoverSlot(2-1);
+    pantheon.dropGod();
+    console.log(`Moved ${desired == "seasons" ? "Selebrak" : "Vomitrax"` +
+                `into slot 2 at ${Date().toString()}`)
+    return pantheon_adjusted;
+  }
+
+  return !pantheon_adjusted;
+}
+
+AP.slotRuin = function() {
+  pantheon_adjusted = true;
+  pantheon = Game.Objects.Temple.minigame
+
+  // Put Godzamok into the desired slot, if not already there
+  if (pantheon.swaps >= 2 && Game.hasGod('ruin') != 1) {
+    pantheon.dragGod(pantheon.gods.ruin);
+    // slots used are 0-2, even though hasGod returns 1-3.
+    pantheon.hoverSlot(1-1);
+    pantheon.dropGod();
+    console.log(`Moved Godzamok into slot 1 at ${Date().toString()}`)
+    return pantheon_adjusted;
+  }
+
+  return !pantheon_adjusted;
+}
+
 AP.slotCyclius = function() {
   pantheon_adjusted = true;
   pantheon = Game.Objects.Temple.minigame
@@ -325,6 +371,40 @@ AP.slotCyclius = function() {
   return !pantheon_adjusted;
 }
 
+AP.slotRigidel = function() {
+  pantheon_adjusted = true;
+  pantheon = Game.Objects.Temple.minigame
+
+  desiredSlot = false;
+  if (['fhof','cbg'].indexOf(AP.spell_factors['best']) != -1) {
+    // When doing FHofF or CBG, we keep selebrak in slot 2, and use dotjiess
+    // more infrequently
+    if (Date.now() - Game.lumpT > Game.lumpRipeAge - 60*60*1000) {
+      desiredSlot = 1;
+    }
+  } else {
+    // Late game; using Dotjiess frequently and selebrak not so useful, so
+    // stick Rigidel in slot 2
+    if (Date.now() - Game.lumpT > Game.lumpRipeAge - 40*60*1000) {
+      desiredSlot = 2;
+    }
+  }
+
+  // Put Rigidel into the desired slot, if not already there
+  if (desiredSlot && pantheon.swaps == 3 &&
+      Game.hasGod('order') != desiredSlot) {
+    pantheon.dragGod(pantheon.gods.ruin);
+    // slots used are 0-2, even though hasGod returns 1-3.
+    pantheon.hoverSlot(desiredSlot-1);
+    pantheon.dropGod();
+    console.log(`Moved Rigidel into slot ${desiredSlot} `+
+                `at ${Date().toString()}`)
+    return pantheon_adjusted;
+  }
+
+  return !pantheon_adjusted;
+}
+
 AP.adjustPantheon = function() {
   pantheon_adjusted = true;
 
@@ -335,7 +415,11 @@ AP.adjustPantheon = function() {
   if (!pantheon)
     return !pantheon_adjusted;
 
-  if (AP.slotCyclius())
+  if (['fhof','cbg'].indexOf(AP.spell_factors['best']) != -1) {
+    if (AP.slotSelebrakOrVomitrax() || AP.slotRuin() || AP.slotCyclius())
+      return pantheon_adjusted;
+  }
+  if (AP.slotRigidel())
     return pantheon_adjusted;
 
   return !pantheon_adjusted;
@@ -1259,11 +1343,11 @@ AP.handleActions = function() {
     // it's up or down to the right value
     AP.towerInterval = setInterval(AP.adjustTowers, 200);
     return;
+  } else if (AP.harvestLumps()) {
+    return;
   } else if (AP.adjustPantheon()) {
     return;
   } else if (AP.castASpell()) {
-    return;
-  } else if (AP.harvestLumps()) {
     return;
   } else if (AP.Options.doSomePurchases() && AP.handlePurchases()) {
     return;
