@@ -1677,6 +1677,7 @@ AP.Init = function() {
       "Golden cookie sound selector",
       "Background selector",
       "Milk selector",
+      "Sugar Frenzy",
       "One mind",
       "Communal brainsweep",
       "Elder Pact",
