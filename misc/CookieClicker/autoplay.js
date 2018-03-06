@@ -8,8 +8,8 @@
 //     (5 or so times per second, after human like delay)
 //   * Will cast a few spells from the Grimoire minigame when conditions
 //     are right
-//   * Moves Cyclius into and out of the lower value slots in the Pantheon
-//     minigame, if those slots are free.  [Not yet configurable]
+//   * Selects a subset of spirits to move into various slots in the
+//     Pantheon.
 //
 // The mediocre reaction time has a few downsides, which I intend to not fix:
 //   * It often fails to complete chains from golden cookies
@@ -29,8 +29,9 @@
 //     * The background selector
 //     * The golden switch
 //   * It won't interact with Krumblor (the dragon)
-//   * It won't select most spirits for the Pantheon minigame
 //   * It won't cast most spells from the Grimoire minigame
+//   * It will ignore about half the spirits, even though they all have
+//     their uses in various special circumstances.
 //   * It won't spend sugar lumps for anything
 //   * It only collects achievements for things related to normal operations
 //     (buying buildings, clicking on golden cookies, maybe an occasional
