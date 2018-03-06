@@ -199,7 +199,7 @@ AP.ShimmerAppeared = function() {
 
 /*** Pantheon actions ***/
 
-AP.spiritOfRuinActions = function(preclick) {
+AP.spiritOfRuinActions = function() {
   action_taken = true;
 
   // If we're not buffing Devastation, then there's no action to take
