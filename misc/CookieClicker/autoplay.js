@@ -649,8 +649,6 @@ AP.forceHandOfFate = function(original_buff) {
   min_overlap = 25; /* Includes waiting for GC to appear & time to click it */
   min_magic = (AP.Options.adjustTowers() ? 23
                                          : Math.floor(10+.6*grimoire.magicM));
-  if (Game.Has("Get lucky") && AP.currentNumBuffs < 2)
-    min_magic = 68
   if (AP.handleSpellAdjustments(original_buff, min_overlap, min_magic, .6))
     return;
 
@@ -674,8 +672,7 @@ AP.handleSpellsDuringBuffs = function() {
   // a successful spell cast are too low.
   if (AP.currentNumBuffs < 1)
     return;
-  if (Game.Has("Get lucky") && AP.currentNumBuffs < 2 &&
-      (AP.currentBuff < 30 || grimoire.magic < 68))
+  if (Game.Has("Get lucky") && AP.currentNumBuffs < 2)
     return;
   if (Game.buffs["Magic inept"])
     return;
