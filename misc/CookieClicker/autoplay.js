@@ -1580,7 +1580,7 @@ AP.shimmerFunction = function(url) {
   // CM.Disp.PlaySound is called unconditionally, but then checks the options
   // to determine whether to actually play the sound, so even if the sound
   // option is off, we can use this to auto-click golden cookies.  :-)
-  if (AP.Options.clickSomeShimmers())
+  if (Game.shimmers.length && AP.Options.clickSomeShimmers())
     AP.ShimmerAppeared();
   AP.Backup.PlaySound(url);
 }
