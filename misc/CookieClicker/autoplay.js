@@ -305,7 +305,7 @@ AP.slotSelebrakOrVomitrax = function() {
     // slots used are 0-2, even though hasGod returns 1-3.
     pantheon.hoverSlot(2-1);
     pantheon.dropGod();
-    console.log(`Moved ${desired == "seasons" ? "Selebrak" : "Vomitrax"` +
+    console.log(`Moved ${desired == "seasons" ? "Selebrak" : "Vomitrax"}` +
                 `into slot 2 at ${Date().toString()}`)
     return pantheon_adjusted;
   }
