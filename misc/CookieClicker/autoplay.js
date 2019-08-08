@@ -523,7 +523,7 @@ AP.compute_spell_factors = function(just_determining_bank_buffer) {
     }
     if (total_num > 0)
       average_expensive_building /= total_num;
-    else if (Game.Objects["Chancemaker"].amount == 400) {
+    else if (Game.ObjectsById[Game.ObjectsById.length-1].amount == 400) {
       average_expensive_building = 40*10**39; // 40 duodecillion
     }
 
@@ -986,14 +986,6 @@ AP.getBestBonus = function(item, price) {
     for (cost of AP.bulk_cost_factor)
       if (price*cost < Game.cookies)
         bonus *= 10;
-    // Lie and bump the value of Grandmas/Mines/Antimatter condensors, because
-    // the real value is in having these other types AND their synergies
-    // (Lucky Grandmas, Gemmed Talismans, and Charm Quarks)
-    if (['Grandma','Mine','Antimatter condenser'].indexOf(item) != -1 &&
-        Game.Objects[item].amount <= 5 &&
-        Game.Objects.Chancemaker.amount >= 100) {
-      bonus = AP.trueCpS;
-    }
   }
 
   // Return what we found
@@ -1188,24 +1180,25 @@ AP.determineBankBuffer = function(item_pp) {
 }
 
 AP.determineBestSpontaneousPurchase = function() {
-  chancemaker_price = Game.Objects["Chancemaker"].getPrice();
+  most_expensive_building = Game.ObjectsById[Game.ObjectsById.length-1]
+  most_expensive_price = most_expensive_building.getPrice();
 
-  // Sell a chancemaker, if conditions are right
-  if (Game.Objects["Chancemaker"].amount == 400) {
-    console.log(`Selling a chancemaker; we hit 400.`);
-    return {name: "Chancemaker", price: chancemaker_price, amount: -1,
-            pp: 3600, ratios: [], obj: Game.Objects["Chancemaker"]};
+  // Sell the most expensive building, if conditions are right
+  if (most_expensive_building.amount == 400) {
+    console.log(`Selling a ${most_expensive_building.name}; we hit 400.`);
+    return {name: most_expensive_building.name, price: most_expensive_price,
+	    amount: -1, pp: 3600, ratios: [], obj: most_expensive_building};
   }
 
   // Find out best building to buy (we'll only buy it if we have enough
   // buffer in the bank)
   best = {}
-  best_price = chancemaker_price*1.001;
+  best_price = most_expensive_price*1.001;
   for (name in Game.Objects) {
     bldg = Game.Objects[name]
     bldg_price = bldg.getPrice();
     if (bldg.amount < 400 && bldg_price < best_price &&
-        (bldg.amount < 399 || name !== 'Chancemaker')) {
+        (bldg.amount < 399 || name !== most_expensive_building.name)) {
       best_price = bldg_price;
       best = {name: name, price: bldg_price, amount: 1,
               pp: 3600, ratios: [], obj: bldg};
@@ -1230,12 +1223,12 @@ AP.purchaseStrategy = function() {
     choice = AP.determineBestSpontaneousPurchase();
     if (choice.amount > 0) {
       // 0.5 is not enough; if you have just under 0.5, then the logic will
-      // sell a chancemaker, you'll have a whole bunch of cash, the price of
-      // chancemakers will go down slightly, you'll buy a chancemaker, then
-      // you again won't have enough, you'll sell another one, then you'll
-      // finally spontaneous edifice.  Just make the buffer a little higher
-      // to avoid this weird cycle.
-      buffer = 0.6 * Game.Objects["Chancemaker"].getPrice();
+      // sell the most expensive building, you'll have a whole bunch of
+      // cash, the price of the most expensive building will go down
+      // slightly, you'll re-buy it, then you again won't have enough,
+      // you'll sell another one, then you'll finally spontaneous edifice.
+      // Just make the buffer a little higher to avoid this weird cycle.
+      buffer = 0.6 * Game.ObjectsById[Game.ObjectsById.length-1].getPrice();
     } else {
       // If we're selling, we don't need to wait.
       buffer = -1 * choice.price;
